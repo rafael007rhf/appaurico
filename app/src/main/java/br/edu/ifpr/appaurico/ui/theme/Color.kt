@@ -2,7 +2,7 @@ package br.edu.ifpr.appaurico.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Paleta Semente
+// Paleta Aurico
 val FundoSage = Color(0xFFEDF1EA)      // fundo
 val VerdeFloresta = Color(0xFF2E4034)  // primaria
 val Mostarda = Color(0xFFD98A3D)       // acao / destaque (CTAs, ponto auricular)

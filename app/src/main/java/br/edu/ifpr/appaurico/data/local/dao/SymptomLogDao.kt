@@ -15,4 +15,10 @@ interface SymptomLogDao {
 
     @Query("SELECT * FROM symptom_log ORDER BY dataHora ASC")
     fun observarTodos(): Flow<List<SymptomLogEntity>>
+
+    @Query("SELECT COUNT(*) FROM symptom_log")
+    suspend fun contar(): Int
+
+    @Query("DELETE FROM symptom_log")
+    suspend fun limparTudo()
 }

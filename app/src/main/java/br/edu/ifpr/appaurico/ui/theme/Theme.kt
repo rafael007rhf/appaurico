@@ -5,7 +5,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-private val SementeColorScheme = lightColorScheme(
+private val AuricoColorScheme = lightColorScheme(
     primary = VerdeFloresta,
     onPrimary = Color.White,
     secondary = Sage,
@@ -30,7 +30,7 @@ fun AppauricoTheme(
     content: @Composable () -> Unit,
 ) {
     MaterialTheme(
-        colorScheme = SementeColorScheme,
+        colorScheme = AuricoColorScheme,
         typography = Typography,
         content = content,
     )

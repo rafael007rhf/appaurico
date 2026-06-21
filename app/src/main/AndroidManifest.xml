@@ -2,8 +2,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Android 13+: exibir notificacoes de lembrete exige permissao do usuario. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Alarmes exatos para os lembretes. USE_EXACT_ALARM cobre Android 13+ (app de
+         lembrete/alarme); SCHEDULE_EXACT_ALARM cobre Android 12, concedida por padrao. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+
     <application
-        android:name=".SementeApp"
+        android:name=".AuricoApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -24,6 +34,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Recebe os alarmes de lembrete; declarado para funcionar mesmo com o app fechado. -->
+        <receiver
+            android:name=".core.notification.ReminderReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

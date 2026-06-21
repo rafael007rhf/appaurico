@@ -9,7 +9,7 @@ import br.edu.ifpr.appaurico.ui.navigation.TopLevelDestination
 // Placeholder sem icones por ora: a lib de icones (material-icons) ainda nao foi
 // adicionada ao projeto. Trocar por icones quando definirmos o set visual.
 @Composable
-fun SementeBottomBar(
+fun AuricoBottomBar(
     rotaAtual: String?,
     onNavegar: (String) -> Unit,
 ) {
