@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -17,6 +16,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import br.edu.ifpr.appaurico.ui.components.AuricoCard
+import br.edu.ifpr.appaurico.ui.theme.AuricoDimens
 
 @Composable
 fun AgendaScreen(
@@ -28,60 +29,48 @@ fun AgendaScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = AuricoDimens.ScreenPadding, vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(AuricoDimens.BlockSpacing),
     ) {
         Text(
             text = "Agenda",
             style = MaterialTheme.typography.headlineSmall,
         )
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = "Próximo retorno",
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    text = uiState.proximoRetorno.ifEmpty { "—" },
-                    style = MaterialTheme.typography.headlineSmall,
-                )
-            }
+        AuricoCard {
+            Text(
+                text = "Próximo retorno",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = uiState.proximoRetorno.ifEmpty { "—" },
+                style = MaterialTheme.typography.headlineSmall,
+            )
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = "Lembretes",
-                    style = MaterialTheme.typography.titleMedium,
-                )
+        AuricoCard {
+            Text(
+                text = "Lembretes",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
-                LembreteLinha(
-                    titulo = "Estimulação",
-                    descricao = "Avisa nos horários do dia para estimular as sementes.",
-                    ativo = uiState.estimulacaoAtiva,
-                    onChange = onEstimulacaoChange,
-                )
+            LembreteLinha(
+                titulo = "Estimulação",
+                descricao = "Avisa nos horários do dia para estimular as sementes.",
+                ativo = uiState.estimulacaoAtiva,
+                onChange = onEstimulacaoChange,
+            )
 
-                HorizontalDivider()
+            HorizontalDivider()
 
-                LembreteLinha(
-                    titulo = "Retorno",
-                    descricao = "Avisa no dia da sessão de retorno.",
-                    ativo = uiState.retornoAtivo,
-                    onChange = onRetornoChange,
-                )
-            }
+            LembreteLinha(
+                titulo = "Retorno",
+                descricao = "Avisa no dia da sessão de retorno.",
+                ativo = uiState.retornoAtivo,
+                onChange = onRetornoChange,
+            )
         }
     }
 }

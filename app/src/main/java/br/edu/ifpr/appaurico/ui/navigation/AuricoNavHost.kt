@@ -29,6 +29,7 @@ import br.edu.ifpr.appaurico.ui.screens.professional.ProfessionalScreen
 import br.edu.ifpr.appaurico.ui.screens.professional.ProfessionalViewModel
 import br.edu.ifpr.appaurico.ui.screens.reminder.ReminderScreen
 import br.edu.ifpr.appaurico.ui.screens.reminder.ReminderViewModel
+import br.edu.ifpr.appaurico.ui.screens.settings.SettingsScreen
 
 private val rotasComBottomBar = TopLevelDestination.entries.map { it.route }.toSet()
 
@@ -91,6 +92,7 @@ private fun NavGraphBuilder.auricoGraph(navController: NavHostController) {
             onEstimularAgora = { navController.navigate(Routes.REMINDER) },
             onRegistrar = { navController.navegarParaTopLevel(Routes.LOG) },
             onVisaoProfissional = { navController.navigate(Routes.PROFESSIONAL) },
+            onAbrirAjustes = { navController.navigate(Routes.SETTINGS) },
         )
     }
     composable(Routes.REMINDER) {
@@ -130,6 +132,9 @@ private fun NavGraphBuilder.auricoGraph(navController: NavHostController) {
         val viewModel: ProfessionalViewModel = hiltViewModel()
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         ProfessionalScreen(uiState = uiState)
+    }
+    composable(Routes.SETTINGS) {
+        SettingsScreen(onVoltar = { navController.popBackStack() })
     }
 }
 

@@ -10,3 +10,5 @@ val Sage = Color(0xFF7CA289)           // dados / positivo
 val Texto = Color(0xFF1B2620)          // texto
 val Linhas = Color(0xFFE2E8DF)         // linhas / divisores
 val AlertaSintomaAlto = Color(0xFFC2603F)
+val Superficie = Color(0xFFFDFEFC)     // fundo dos cards (contrasta com o fundo sage)
+val TextoSuave = Color(0xFF61756A)     // cinza esverdeado para rotulos secundarios

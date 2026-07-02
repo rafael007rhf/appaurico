@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import br.edu.ifpr.appaurico.ui.components.EarDiagram
 import br.edu.ifpr.appaurico.ui.components.pontosAuricularesPadrao
+import br.edu.ifpr.appaurico.ui.theme.AuricoDimens
 
 /** Ponto que o paciente estimula nesta tela. Fixo no MVP; depois pode variar por ciclo. */
 private const val INDICE_PONTO_DESTACADO = 0
@@ -41,9 +43,9 @@ fun ReminderScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(horizontal = AuricoDimens.ScreenPadding, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+        verticalArrangement = Arrangement.spacedBy(AuricoDimens.BlockSpacing),
     ) {
         Text(
             text = "Estimule o ponto ${ponto.nome}",
@@ -64,12 +66,14 @@ fun ReminderScreen(
             text = "Pressione a semente em destaque por cerca de 30 segundos, " +
                 "com firmeza e sem causar dor.",
             style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
 
         Button(
             onClick = onMarcarComoFeito,
             enabled = !uiState.salvando,
+            shape = RoundedCornerShape(AuricoDimens.CornerRadius),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Marcar como feito")

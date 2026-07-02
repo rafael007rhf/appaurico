@@ -14,7 +14,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import br.edu.ifpr.appaurico.ui.components.AuricoCard
 import br.edu.ifpr.appaurico.ui.components.EvolutionChart
+import br.edu.ifpr.appaurico.ui.theme.AuricoDimens
 
 @Composable
 fun EvolutionScreen(
@@ -22,12 +24,13 @@ fun EvolutionScreen(
 ) {
     if (uiState.pontos.isEmpty()) {
         Box(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier.fillMaxSize().padding(AuricoDimens.ScreenPadding),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = "Faça seu primeiro registro",
                 style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
         }
@@ -35,26 +38,30 @@ fun EvolutionScreen(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = AuricoDimens.ScreenPadding, vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(AuricoDimens.BlockSpacing),
     ) {
         Text(
             text = "Evolução do sintoma",
             style = MaterialTheme.typography.headlineSmall,
         )
 
-        EvolutionChart(
-            pontos = uiState.pontos,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        AuricoCard {
+            EvolutionChart(
+                pontos = uiState.pontos,
+                modifier = Modifier.fillMaxWidth(),
+            )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Resumo("Início", uiState.nivelInicial?.toString() ?: "-")
-            Resumo("Hoje", uiState.nivelAtual?.toString() ?: "-")
-            Resumo("Variação", uiState.variacao?.let { formatarVariacao(it) } ?: "-")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Resumo("Início", uiState.nivelInicial?.toString() ?: "-")
+                Resumo("Hoje", uiState.nivelAtual?.toString() ?: "-")
+                Resumo("Variação", uiState.variacao?.let { formatarVariacao(it) } ?: "-")
+            }
         }
     }
 }
@@ -63,7 +70,11 @@ fun EvolutionScreen(
 private fun Resumo(rotulo: String, valor: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = valor, style = MaterialTheme.typography.headlineSmall)
-        Text(text = rotulo, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            text = rotulo,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

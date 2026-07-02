@@ -1,21 +1,31 @@
 package br.edu.ifpr.appaurico.ui.screens.home
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import br.edu.ifpr.appaurico.R
+import br.edu.ifpr.appaurico.ui.components.AuricoCard
+import br.edu.ifpr.appaurico.ui.theme.AuricoDimens
 
 @Composable
 fun HomeScreen(
@@ -23,14 +33,17 @@ fun HomeScreen(
     onEstimularAgora: () -> Unit,
     onRegistrar: () -> Unit,
     onVisaoProfissional: () -> Unit,
+    onAbrirAjustes: () -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = AuricoDimens.ScreenPadding, vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(AuricoDimens.BlockSpacing),
     ) {
+        BrandHeader(onAbrirAjustes = onAbrirAjustes)
+
         ProximaEstimulacaoCard(
             momento = uiState.proximaEstimulacao,
             onEstimularAgora = onEstimularAgora,
@@ -40,6 +53,7 @@ fun HomeScreen(
 
         Button(
             onClick = onRegistrar,
+            shape = RoundedCornerShape(AuricoDimens.CornerRadius),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Registrar como me sinto agora")
@@ -51,9 +65,29 @@ fun HomeScreen(
         ) {
             Text("Visão do profissional")
         }
+    }
+}
 
-        // Controles de feira: presentes apenas no build de debug (no-op em release).
-        DemoControls(modifier = Modifier.fillMaxWidth())
+@Composable
+private fun BrandHeader(onAbrirAjustes: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Image(
+            painter = painterResource(R.drawable.ic_aurico_logo),
+            contentDescription = null,
+            modifier = Modifier.size(40.dp),
+        )
+        Spacer(modifier = Modifier.size(12.dp))
+        Text(
+            text = stringResource(R.string.app_name),
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        // Acesso discreto aos ajustes de demonstração (no-op em release).
+        DemoSettingsButton(onClick = onAbrirAjustes)
     }
 }
 
@@ -62,71 +96,63 @@ private fun ProximaEstimulacaoCard(
     momento: String,
     onEstimularAgora: () -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+    AuricoCard {
+        Text(
+            text = "Próxima estimulação",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = momento.ifEmpty { "—" },
+            style = MaterialTheme.typography.headlineSmall,
+        )
+        Button(
+            onClick = onEstimularAgora,
+            shape = RoundedCornerShape(AuricoDimens.CornerRadius),
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(
-                text = "Próxima estimulação",
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = momento.ifEmpty { "—" },
-                style = MaterialTheme.typography.headlineSmall,
-            )
-            Button(
-                onClick = onEstimularAgora,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Estimular agora")
-            }
+            Text("Estimular agora")
         }
     }
 }
 
 @Composable
 private fun CicloCard(uiState: HomeUiState) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                text = "Ciclo atual",
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = "Dia ${uiState.diaCiclo} de ${uiState.duracaoCiclo}",
-                style = MaterialTheme.typography.bodyLarge,
-            )
+    AuricoCard {
+        Text(
+            text = "Ciclo atual",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = "Dia ${uiState.diaCiclo} de ${uiState.duracaoCiclo}",
+            style = MaterialTheme.typography.bodyLarge,
+        )
 
+        Text(
+            text = "Adesão: ${uiState.adesaoPercentual}% " +
+                "(${uiState.estimulacoesFeitas} de ${uiState.estimulacoesPrevistas})",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        LinearProgressIndicator(
+            progress = { uiState.adesaoPercentual / 100f },
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        val ultimo = uiState.ultimoRegistroNivel
+        if (ultimo != null) {
             Text(
-                text = "Adesão: ${uiState.adesaoPercentual}% " +
-                    "(${uiState.estimulacoesFeitas} de ${uiState.estimulacoesPrevistas})",
+                text = "Último registro: nível $ultimo · ${uiState.ultimoRegistroQuando}",
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            LinearProgressIndicator(
-                progress = { uiState.adesaoPercentual / 100f },
-                modifier = Modifier.fillMaxWidth(),
+        } else {
+            Text(
+                text = "Faça seu primeiro registro do sintoma.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-
-            val ultimo = uiState.ultimoRegistroNivel
-            if (ultimo != null) {
-                Text(
-                    text = "Último registro: nível $ultimo · ${uiState.ultimoRegistroQuando}",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            } else {
-                Text(
-                    text = "Faça seu primeiro registro do sintoma.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
         }
     }
 }

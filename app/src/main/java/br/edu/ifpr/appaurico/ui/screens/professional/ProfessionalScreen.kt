@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,7 +20,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import br.edu.ifpr.appaurico.ui.components.AuricoCard
 import br.edu.ifpr.appaurico.ui.components.EvolutionChart
+import br.edu.ifpr.appaurico.ui.theme.AuricoDimens
 
 @Composable
 fun ProfessionalScreen(
@@ -32,8 +34,8 @@ fun ProfessionalScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = AuricoDimens.ScreenPadding, vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(AuricoDimens.BlockSpacing),
     ) {
         Text(
             text = "Visão do profissional",
@@ -42,6 +44,7 @@ fun ProfessionalScreen(
         Text(
             text = uiState.nomePaciente,
             style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         AdesaoCard(uiState)
@@ -52,6 +55,7 @@ fun ProfessionalScreen(
 
         Button(
             onClick = { compartilharRelatorio(context, uiState.relatorio) },
+            shape = RoundedCornerShape(AuricoDimens.CornerRadius),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Compartilhar relatório")
@@ -67,27 +71,26 @@ fun ProfessionalScreen(
 
 @Composable
 private fun AdesaoCard(uiState: ProfessionalUiState) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(text = "Adesão", style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = "${uiState.adesaoPercentual}%",
-                style = MaterialTheme.typography.headlineSmall,
-            )
-            Text(
-                text = "${uiState.estimulacoesFeitas} de ${uiState.estimulacoesPrevistas} estimulações",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = "Ciclo: dia ${uiState.diaCiclo} de ${uiState.duracaoCiclo}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
+    AuricoCard {
+        Text(
+            text = "Adesão",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = "${uiState.adesaoPercentual}%",
+            style = MaterialTheme.typography.headlineSmall,
+        )
+        Text(
+            text = "${uiState.estimulacoesFeitas} de ${uiState.estimulacoesPrevistas} estimulações",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = "Ciclo: dia ${uiState.diaCiclo} de ${uiState.duracaoCiclo}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -101,6 +104,7 @@ private fun TendenciaSecao(uiState: ProfessionalUiState) {
         Text(
             text = "Sem registros de sintoma ainda.",
             style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         return
     }
@@ -128,15 +132,14 @@ private fun RegistrosRecentesSecao(uiState: ProfessionalUiState) {
         Text(
             text = "Nenhum registro ainda.",
             style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         return
     }
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-            uiState.registrosRecentes.forEachIndexed { indice, registro ->
-                if (indice > 0) HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                RegistroLinha(registro)
-            }
+    AuricoCard(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+        uiState.registrosRecentes.forEachIndexed { indice, registro ->
+            if (indice > 0) HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            RegistroLinha(registro)
         }
     }
 }
@@ -168,7 +171,11 @@ private fun RegistroLinha(registro: RegistroResumo) {
 private fun Resumo(rotulo: String, valor: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = valor, style = MaterialTheme.typography.headlineSmall)
-        Text(text = rotulo, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            text = rotulo,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

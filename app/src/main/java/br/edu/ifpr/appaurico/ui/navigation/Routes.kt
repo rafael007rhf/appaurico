@@ -9,6 +9,7 @@ object Routes {
     const val EVOLUTION = "evolution"
     const val AGENDA = "agenda"
     const val PROFESSIONAL = "professional"
+    const val SETTINGS = "settings"
 }
 
 /** Destinos exibidos na bottom bar (home, log, evolution, agenda). */
