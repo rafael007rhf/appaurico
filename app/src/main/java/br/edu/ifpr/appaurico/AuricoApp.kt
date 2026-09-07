@@ -22,7 +22,7 @@ class AuricoApp : Application() {
         super.onCreate()
         Notificacoes.criarCanal(this)
 
-        // Alarmes nao sobrevivem ao fechamento do processo: reagenda os ativos a cada inicio.
+        // Mantem o AlarmManager sincronizado com o estado persistido sempre que o app inicia.
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             val lembretes = reminderRepository.observarLembretes().first()
             reminderScheduler.reagendarTodos(lembretes)
