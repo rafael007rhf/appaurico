@@ -1,14 +1,14 @@
-# CLAUDE.md — Semente
+# CLAUDE.md — Aurico
 
-> Guia do projeto para o Claude Code. Leia este arquivo antes de cada tarefa e siga os padrões aqui descritos. Se uma instrução de um prompt conflitar com este arquivo, peça confirmação antes de prosseguir.
+> Guia do projeto. Leia este arquivo antes de cada tarefa e siga os padrões aqui descritos. Se uma instrução de um prompt conflitar com este arquivo, peça confirmação antes de prosseguir.
 
 ## 1. O que é o app
 
-**Semente** é um aplicativo Android nativo de **apoio ao paciente de auriculoterapia** durante o intervalo entre as sessões.
+**Aurico** é um aplicativo Android nativo de **apoio ao paciente de auriculoterapia** durante o intervalo entre as sessões.
 
-Na auriculoterapia, o paciente sai da sessão com sementes (esferas) fixadas na orelha e precisa **estimulá-las várias vezes ao dia** até o retorno. A adesão a essa tarefa é frágil e a evolução dos sintomas raramente é registrada. O app resolve isso oferecendo: lembretes de estimulação, registro diário do sintoma (escala 0–10), gráfico de evolução, agenda de retorno e um relatório para o profissional que conduz o tratamento.
+Na auriculoterapia, o paciente sai da sessão com sementes (esferas) fixadas na orelha e precisa **estimulá-las várias vezes ao dia** até o retorno. A adesão a essa tarefa é frágil e a evolução dos sintomas raramente é registrada. O app apoia esse acompanhamento oferecendo lembretes de estimulação, registro diário do sintoma (escala 0–10), gráfico de evolução, agenda de retorno e um relatório para o profissional que conduz o tratamento.
 
-**Enquadramento (importante para o contexto do projeto):** isto é uma **inovação de serviço** — melhora um serviço de saúde existente. O app **não substitui** a avaliação do profissional; é ferramenta de apoio. Mantenha esse princípio na copy da interface.
+**Enquadramento:** isto é uma **inovação de serviço** — melhora um serviço de saúde existente. O app **não substitui** a avaliação do profissional; é uma ferramenta de apoio. Mantenha esse princípio na copy da interface.
 
 **Contexto acadêmico:** projeto para o VI SeCIF / XIV IFTech (IFPR — Instituto Federal do Paraná, Campus Curitiba). O artefato será **demonstrado ao vivo** numa feira, possivelmente **sem internet**. Portanto: tudo funciona **100% offline e local**. Sem backend, sem nuvem, sem login.
 
@@ -16,60 +16,64 @@ Na auriculoterapia, o paciente sai da sessão com sementes (esferas) fixadas na 
 
 - **Linguagem:** Kotlin
 - **UI:** Jetpack Compose (Material 3)
-- **Arquitetura:** MVVM em camadas (data / domain / ui), padrão recomendado pelo Google
+- **Arquitetura:** MVVM em camadas (data / domain / ui)
 - **Injeção de dependência:** Hilt
 - **Persistência:** Room (banco local, sem rede)
 - **Assíncrono:** Kotlin Coroutines + Flow
 - **Navegação:** Navigation Compose
 - **Notificações/lembretes:** AlarmManager + BroadcastReceiver + NotificationManager
 - **minSdk:** 26 · **build:** Kotlin DSL (`build.gradle.kts`), version catalog (`libs.versions.toml`)
-- **Package base:** `br.edu.ifpr.semente`
+- **Package base:** `br.edu.ifpr.appaurico`
 
-Não introduza outras bibliotecas (Retrofit, Firebase, etc.) sem perguntar — o app é offline por princípio.
+Não introduza bibliotecas de rede ou backend (Retrofit, Firebase etc.) sem uma decisão explícita — o app é offline por princípio.
 
-## 3. Estrutura de pastas (mapa-alvo)
+## 3. Estrutura de pastas
 
-Coloque cada arquivo no diretório correspondente. A pasta nasce junto com o arquivo.
-
-```
-br/edu/ifpr/semente/
-├─ MainActivity.kt                 // @AndroidEntryPoint, hospeda o NavHost
-├─ SementeApp.kt                   // @HiltAndroidApp (Application)
-├─ core/notification/
-│  ├─ ReminderScheduler.kt         // agenda alarmes
-│  └─ ReminderReceiver.kt          // recebe o alarme e emite a notificação
+```text
+br/edu/ifpr/appaurico/
+├─ MainActivity.kt
+├─ AuricoApp.kt
+├─ core/
+│  ├─ cycle/ Ciclo.kt
+│  └─ notification/
+│     ├─ BootReceiver.kt
+│     ├─ Notificacoes.kt
+│     ├─ ReminderScheduler.kt
+│     └─ ReminderReceiver.kt
 ├─ data/
 │  ├─ local/
-│  │  ├─ SementeDatabase.kt
-│  │  ├─ dao/ SymptomLogDao.kt, ReminderDao.kt
-│  │  └─ entity/ SymptomLogEntity.kt, ReminderEntity.kt
-│  └─ repository/ SymptomRepository.kt, ReminderRepository.kt
-├─ domain/model/ SymptomLog.kt, Reminder.kt
+│  │  ├─ AuricoDatabase.kt
+│  │  ├─ dao/ SymptomLogDao.kt, ReminderDao.kt, StimulationDao.kt
+│  │  └─ entity/ SymptomLogEntity.kt, ReminderEntity.kt, StimulationEntity.kt
+│  └─ repository/ SymptomRepository.kt, ReminderRepository.kt, StimulationRepository.kt
+├─ domain/model/ SymptomLog.kt, Reminder.kt, ReminderType.kt, Stimulation.kt
 ├─ ui/
-│  ├─ theme/ Color.kt, Theme.kt, Type.kt
-│  ├─ navigation/ SementeNavHost.kt, Routes.kt
-│  ├─ components/ EarDiagram.kt, SymptomScale.kt, EvolutionChart.kt, SementeBottomBar.kt
+│  ├─ theme/ Color.kt, Theme.kt, Type.kt, Dimens.kt
+│  ├─ navigation/ AuricoNavHost.kt, Routes.kt
+│  ├─ components/ EarDiagram.kt, SymptomScale.kt, EvolutionChart.kt, AuricoBottomBar.kt, AuricoCard.kt
 │  └─ screens/
 │     ├─ onboarding/ OnboardingScreen.kt
 │     ├─ home/ HomeScreen.kt, HomeViewModel.kt
-│     ├─ reminder/ ReminderScreen.kt
+│     ├─ reminder/ ReminderScreen.kt, ReminderViewModel.kt
 │     ├─ log/ LogScreen.kt, LogViewModel.kt
 │     ├─ evolution/ EvolutionScreen.kt, EvolutionViewModel.kt
 │     ├─ agenda/ AgendaScreen.kt, AgendaViewModel.kt
-│     └─ professional/ ProfessionalScreen.kt, ProfessionalViewModel.kt
+│     ├─ professional/ ProfessionalScreen.kt, ProfessionalViewModel.kt
+│     └─ settings/ SettingsScreen.kt
 └─ di/ AppModule.kt
 ```
 
-## 4. Padrão de uma tela (sempre o mesmo)
+## 4. Padrão de uma tela
 
 Cada tela com lógica segue: **Screen (Composable) → ViewModel → Repository → DAO (Room)**.
 
-- A `Screen` é stateless: recebe o estado e lambdas de evento; não acessa repositório direto.
+- A `Screen` recebe estado e lambdas de evento; não acessa repositório diretamente.
 - O `ViewModel` expõe um `UiState` via `StateFlow` e trata os eventos.
-- O `Repository` é a única porta para os dados; **expõe domain models, nunca entities**.
-- Telas sem estado persistente (Onboarding, Reminder) podem dispensar ViewModel.
+- O `Repository` é a única porta para os dados e expõe domain models, nunca entities.
+- Telas sem estado persistente podem dispensar ViewModel.
 
 Exemplo de contrato de estado:
+
 ```kotlin
 data class LogUiState(
     val nivelSelecionado: Int? = null,
@@ -83,50 +87,62 @@ data class LogUiState(
 
 - `SymptomLogEntity`: `id`, `dataHora: Long`, `nivel: Int` (0..10), `nota: String?`
 - `ReminderEntity`: `id`, `tipo: ReminderType` (ESTIMULACAO, RETORNO), `horario`, `ativo: Boolean`
-- DAOs expõem leitura como `Flow<List<…>>` (a UI observa e reage).
-- Converters do Room para enums/datas quando necessário.
+- `StimulationEntity`: registra as estimulações realizadas para cálculo de adesão.
+- DAOs expõem leitura como `Flow<List<…>>` quando a UI precisa observar mudanças.
 - O mapeamento entity ↔ domain fica no repository.
+- Os dados de acompanhamento permanecem locais e são excluídos de backup e transferência.
 
-## 6. Telas (escopo do MVP)
+## 6. Telas e escopo do MVP
 
 1. **Onboarding** — abertura, propósito, botão "Começar".
-2. **Home** — próxima estimulação, CTA "Estimular agora", ciclo atual (dia X de N), adesão, atalho para registrar e link "visão do profissional".
-3. **Reminder** — diagrama da orelha com o ponto destacado, instrução, "marcar ponto como feito" (registra a estimulação).
-4. **Log** — pergunta o nível de ansiedade (escala 0–10), nota opcional, **salva no Room**.
-5. **Evolution** — gráfico de linha **a partir dos registros reais** do banco + resumo (início, hoje, variação).
-6. **Agenda** — próximo retorno e configuração dos lembretes (estimulação e retorno).
-7. **Professional** — visão de leitura: adesão, tendência do sintoma, registros recentes, botão "compartilhar relatório", aviso de que não substitui avaliação clínica.
+2. **Home** — próxima estimulação, CTA "Estimular agora", ciclo atual, adesão, atalho para registrar e link para a visão do profissional.
+3. **Reminder** — diagrama da orelha com o ponto destacado, instrução e ação para marcar a estimulação como feita.
+4. **Log** — pergunta o nível do sintoma em escala 0–10, nota opcional e salva no Room.
+5. **Evolution** — gráfico de linha a partir dos registros reais do banco + resumo de início, hoje e variação.
+6. **Agenda** — próximo retorno e ativação/desativação dos lembretes de estimulação e retorno.
+7. **Professional** — visão de leitura com adesão, tendência do sintoma, registros recentes, compartilhamento de relatório e aviso de que não substitui avaliação clínica.
+8. **Settings** — ajustes disponíveis no protótipo.
 
-**Fora do MVP (não implementar agora):** contas/login, backend, sincronização em nuvem, múltiplos pacientes, o profissional como usuário autenticado. Se um prompt pedir algo assim, avise que está fora do escopo definido.
+O ciclo atual é **demonstrativo**: sete dias, horários predefinidos e retorno calculado localmente. Não apresentar o MVP como uma agenda clínica totalmente configurável.
+
+**Fora do MVP:** contas/login, backend, sincronização em nuvem, múltiplos pacientes e profissional como usuário autenticado.
 
 ## 7. Identidade visual
 
-Paleta (defina em `ui/theme/Color.kt`):
-- Fundo sage `#EDF1EA` · Verde floresta (primária) `#2E4034` · Mostarda (ação/destaque) `#D98A3D` · Sage (dados/positivo) `#7CA289` · Texto `#1B2620` · Linhas `#E2E8DF`
-- Alerta de sintoma alto: `#C2603F`
+Paleta em `ui/theme/Color.kt`:
+- Fundo sage `#EDF1EA`
+- Verde floresta (primária) `#2E4034`
+- Mostarda (ação/destaque) `#D98A3D`
+- Sage (dados/positivo) `#7CA289`
+- Texto `#1B2620`
+- Linhas `#E2E8DF`
+- Alerta de sintoma alto `#C2603F`
 
-A cor mostarda remete às **sementes de mostarda** usadas na prática — use-a para CTAs e para o ponto auricular destacado. O **diagrama da orelha** é o elemento de identidade; desenhe-o com `Canvas` em `EarDiagram.kt`.
+A cor mostarda remete às **sementes de mostarda** usadas na prática. O diagrama da orelha é um dos elementos centrais da identidade.
 
-> "Semente" é um **nome provisório**. Centralize o nome em um único lugar (string resource `app_name`) para troca fácil.
+O nome oficial deste protótipo é **Aurico** e deve permanecer centralizado em `@string/app_name` para consistência.
 
-## 8. Copy (texto da interface)
+## 8. Copy
 
 - Português do Brasil, tom calmo e claro, frases curtas.
-- Voz ativa nos botões, dizendo o que acontece: "Salvar registro", "Estimular agora", "Marcar como feito".
-- O mesmo verbo do começo ao fim de um fluxo (botão "Salvar" → confirmação "Registro salvo").
-- Sem jargão técnico voltado ao usuário. Nada de emojis.
-- Estados vazios são convite à ação ("Faça seu primeiro registro"), não decoração.
+- Voz ativa nos botões: "Salvar registro", "Estimular agora", "Marcar como feito".
+- Usar o mesmo verbo do começo ao fim de um fluxo.
+- Sem jargão técnico voltado ao usuário.
+- Estados vazios devem convidar à ação.
+- Não prometer diagnóstico, tratamento ou substituição do profissional.
 
-## 9. Qualidade mínima
+## 9. Notificações e privacidade
 
-- Compila ao final de cada tarefa. Se não compilar, conserte antes de encerrar.
-- Acessibilidade: `contentDescription` em ícones, alvos de toque ≥ 48dp, respeitar fonte grande.
-- Sem credenciais, sem código de rede.
-- Comente apenas o não óbvio (ex.: agendamento de alarme); o resto deve se explicar pelo nome.
+- Android 13+ exige `POST_NOTIFICATIONS` em runtime.
+- Os lembretes usam `AlarmManager`; quando alarme exato não está disponível, há fallback para alarme inexato.
+- `BootReceiver` restaura os lembretes ativos após reinicialização do dispositivo.
+- O app não usa rede, backend ou nuvem.
+- Backup e transferência dos dados locais devem permanecer desativados/excluídos.
 
-## 10. Como trabalhar comigo
+## 10. Qualidade mínima
 
-- Faça **uma etapa por vez** e pare para eu testar antes de seguir.
-- Ao terminar uma etapa, diga em uma linha o que mudou e o que devo verificar.
-- Em decisão ambígua, pergunte em vez de assumir.
-- Não refatore arquivos fora do escopo da tarefa atual sem avisar.
+- Compilar ao final de cada tarefa e corrigir erros antes de encerrar.
+- Acessibilidade: `contentDescription` quando aplicável, alvos de toque adequados e suporte a fonte grande.
+- Sem credenciais e sem código de rede.
+- Comentar apenas o não óbvio.
+- Não refatorar arquivos fora do escopo sem necessidade.
