@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Android 13+: exibir notificacoes de lembrete exige permissao do usuario. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Permite reagendar lembretes depois que o dispositivo reinicia. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Alarmes exatos para os lembretes. USE_EXACT_ALARM cobre Android 13+ (app de
          lembrete/alarme); SCHEDULE_EXACT_ALARM cobre Android 12, concedida por padrao. -->
@@ -14,7 +16,7 @@
 
     <application
         android:name=".AuricoApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -39,6 +41,16 @@
         <receiver
             android:name=".core.notification.ReminderReceiver"
             android:exported="false" />
+
+        <!-- AlarmManager perde os alarmes no reboot; restaura apenas os lembretes ativos. -->
+        <receiver
+            android:name=".core.notification.BootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
