@@ -69,10 +69,9 @@ fun SymptomScale(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top,
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "0",
                     style = MaterialTheme.typography.labelLarge,
@@ -84,7 +83,10 @@ fun SymptomScale(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Column(horizontalAlignment = Alignment.End) {
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.End,
+            ) {
                 Text(
                     text = "10",
                     style = MaterialTheme.typography.labelLarge,
