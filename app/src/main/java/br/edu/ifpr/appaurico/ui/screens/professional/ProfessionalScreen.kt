@@ -13,12 +13,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import br.edu.ifpr.appaurico.ui.components.AuricoCard
 import br.edu.ifpr.appaurico.ui.components.EvolutionChart
@@ -37,21 +39,21 @@ fun ProfessionalScreen(
             .padding(horizontal = AuricoDimens.ScreenPadding, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(AuricoDimens.BlockSpacing),
     ) {
-        Text(
-            text = "Visão do profissional",
-            style = MaterialTheme.typography.headlineSmall,
-        )
-        Text(
-            text = uiState.nomePaciente,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(
+                text = "Resumo do acompanhamento",
+                style = MaterialTheme.typography.headlineSmall,
+            )
+            Text(
+                text = "Visão do profissional · ${uiState.nomePaciente}",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
 
-        AdesaoCard(uiState)
-
-        TendenciaSecao(uiState)
-
-        RegistrosRecentesSecao(uiState)
+        ResumoGeralCard(uiState)
+        TendenciaCard(uiState)
+        RegistrosRecentesCard(uiState)
 
         Button(
             onClick = { compartilharRelatorio(context, uiState.relatorio) },
@@ -61,84 +63,146 @@ fun ProfessionalScreen(
             Text("Compartilhar relatório")
         }
 
-        Text(
-            text = "Este resumo é de apoio e não substitui a avaliação do profissional.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        AuricoCard {
+            Text(
+                text = "Sobre estes dados",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "O protótipo organiza registros feitos pelo próprio paciente para apoiar a conversa no retorno. Não realiza diagnóstico nem define conduta clínica.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
 @Composable
-private fun AdesaoCard(uiState: ProfessionalUiState) {
-    AuricoCard {
+private fun ResumoGeralCard(uiState: ProfessionalUiState) {
+    AuricoCard(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
-            text = "Adesão",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            text = "Visão geral",
+            style = MaterialTheme.typography.titleLarge,
         )
-        Text(
-            text = "${uiState.adesaoPercentual}%",
-            style = MaterialTheme.typography.headlineSmall,
-        )
-        Text(
-            text = "${uiState.estimulacoesFeitas} de ${uiState.estimulacoesPrevistas} estimulações",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = "Ciclo: dia ${uiState.diaCiclo} de ${uiState.duracaoCiclo}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Metrica(
+                valor = "${uiState.adesaoPercentual}%",
+                rotulo = "adesão",
+                modifier = Modifier.weight(1f),
+            )
+            Metrica(
+                valor = "${uiState.diaCiclo}/${uiState.duracaoCiclo}",
+                rotulo = "dia do ciclo",
+                modifier = Modifier.weight(1f),
+            )
+            Metrica(
+                valor = uiState.nivelAtual?.toString() ?: "—",
+                rotulo = "nível atual",
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "Estimulações registradas",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "${uiState.estimulacoesFeitas}/${uiState.estimulacoesPrevistas}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            LinearProgressIndicator(
+                progress = { uiState.adesaoPercentual / 100f },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
 @Composable
-private fun TendenciaSecao(uiState: ProfessionalUiState) {
-    Text(
-        text = "Tendência do sintoma",
-        style = MaterialTheme.typography.titleMedium,
-    )
-    if (uiState.pontos.isEmpty()) {
-        Text(
-            text = "Sem registros de sintoma ainda.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        return
-    }
-    EvolutionChart(
-        pontos = uiState.pontos,
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Resumo("Início", uiState.nivelInicial?.toString() ?: "-")
-        Resumo("Hoje", uiState.nivelAtual?.toString() ?: "-")
-        Resumo("Variação", uiState.variacao?.let { formatarSinal(it) } ?: "-")
+private fun TendenciaCard(uiState: ProfessionalUiState) {
+    AuricoCard(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = "Evolução do sintoma",
+                style = MaterialTheme.typography.titleLarge,
+            )
+            Text(
+                text = if (uiState.pontos.isEmpty()) {
+                    "Ainda não há registros suficientes para visualizar o histórico."
+                } else {
+                    "Histórico construído a partir dos registros do paciente."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (uiState.pontos.isNotEmpty()) {
+            EvolutionChart(
+                pontos = uiState.pontos,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Metrica(
+                    valor = uiState.nivelInicial?.toString() ?: "—",
+                    rotulo = "início",
+                    modifier = Modifier.weight(1f),
+                )
+                Metrica(
+                    valor = uiState.nivelAtual?.toString() ?: "—",
+                    rotulo = "agora",
+                    modifier = Modifier.weight(1f),
+                )
+                Metrica(
+                    valor = uiState.variacao?.let(::formatarSinal) ?: "—",
+                    rotulo = "variação",
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
     }
 }
 
 @Composable
-private fun RegistrosRecentesSecao(uiState: ProfessionalUiState) {
-    Text(
-        text = "Registros recentes",
-        style = MaterialTheme.typography.titleMedium,
-    )
-    if (uiState.registrosRecentes.isEmpty()) {
-        Text(
-            text = "Nenhum registro ainda.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        return
-    }
+private fun RegistrosRecentesCard(uiState: ProfessionalUiState) {
     AuricoCard(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+        Column(
+            modifier = Modifier.padding(bottom = if (uiState.registrosRecentes.isEmpty()) 0.dp else 10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = "Registros recentes",
+                style = MaterialTheme.typography.titleLarge,
+            )
+            Text(
+                text = if (uiState.registrosRecentes.isEmpty()) {
+                    "Nenhum registro realizado ainda."
+                } else {
+                    "Últimas percepções registradas pelo paciente."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
         uiState.registrosRecentes.forEachIndexed { indice, registro ->
-            if (indice > 0) HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            if (indice > 0) HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
             RegistroLinha(registro)
         }
     }
@@ -151,7 +215,11 @@ private fun RegistroLinha(registro: RegistroResumo) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = registro.quando, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = registro.quando,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+            )
             if (!registro.nota.isNullOrBlank()) {
                 Text(
                     text = registro.nota,
@@ -163,14 +231,29 @@ private fun RegistroLinha(registro: RegistroResumo) {
         Text(
             text = "Nível ${registro.nivel}",
             style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
         )
     }
 }
 
 @Composable
-private fun Resumo(rotulo: String, valor: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = valor, style = MaterialTheme.typography.headlineSmall)
+private fun Metrica(
+    valor: String,
+    rotulo: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = valor,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+        )
         Text(
             text = rotulo,
             style = MaterialTheme.typography.bodySmall,

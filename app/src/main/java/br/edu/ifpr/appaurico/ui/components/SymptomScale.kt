@@ -1,58 +1,101 @@
 package br.edu.ifpr.appaurico.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 
-/**
- * Escala de 0 a 10 para o paciente indicar a intensidade do sintoma.
- * Cada item e um alvo de toque de 48dp e expoe o estado de selecao para acessibilidade.
- */
+/** Escala subjetiva de intensidade de 0 a 10. */
 @Composable
 fun SymptomScale(
     valorSelecionado: Int?,
     onValorSelecionado: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val cores = MaterialTheme.colorScheme
-    FlowRow(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        (0..10).forEach { nivel ->
-            val selecionado = nivel == valorSelecionado
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(if (selecionado) cores.primary else cores.surfaceVariant)
-                    .selectable(
-                        selected = selecionado,
-                        onClick = { onValorSelecionado(nivel) },
-                    )
-                    .semantics {
-                        stateDescription = if (selecionado) "Selecionado" else "Não selecionado"
-                    },
+        Row(
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = valorSelecionado?.toString() ?: "—",
+                style = MaterialTheme.typography.displayMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = " / 10",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        Text(
+            text = if (valorSelecionado == null) {
+                "Deslize para selecionar a intensidade"
+            } else {
+                "Intensidade percebida agora"
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Slider(
+            value = valorSelecionado?.toFloat() ?: 0f,
+            onValueChange = { onValorSelecionado(it.roundToInt()) },
+            valueRange = 0f..10f,
+            steps = 9,
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics {
+                    contentDescription = "Intensidade do sintoma de zero a dez"
+                },
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "0",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "Sem incômodo",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.End,
             ) {
                 Text(
-                    text = nivel.toString(),
-                    color = if (selecionado) cores.onPrimary else cores.onSurface,
-                    style = MaterialTheme.typography.titleMedium,
+                    text = "10",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "Maior intensidade percebida",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
