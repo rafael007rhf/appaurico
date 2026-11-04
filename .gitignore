@@ -13,3 +13,14 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+node_modules/
+.next/
+dist/
+.env
+.env.local
+*.tsbuildinfo
+*.log
+backend/.data/
+infra/realm.generated.json
+.kotlin/
