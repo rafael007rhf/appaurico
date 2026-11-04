@@ -43,6 +43,8 @@ jobs:
           api-level: 35
           arch: x86_64
           disable-linux-hw-accel: false
+          disk-size: 2048M
+          emulator-boot-timeout: 180
           script: ./gradlew :app:connectedPatientDebugAndroidTest
   live-integration:
     runs-on: ubuntu-latest
@@ -86,6 +88,8 @@ jobs:
           api-level: 35
           arch: x86_64
           disable-linux-hw-accel: false
+          disk-size: 2048M
+          emulator-boot-timeout: 180
           script: node scripts/run-android-integration.mjs
       - name: Diagnose failed local services
         if: failure()
