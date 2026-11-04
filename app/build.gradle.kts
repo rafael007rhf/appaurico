@@ -95,5 +95,13 @@ dependencies {
     androidTestImplementation("androidx.room:room-testing:2.7.2")
 }
 
-android { testOptions { unitTests.isIncludeAndroidResources = true } }
+android {
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all {
+            // Resolve Robolectric runtime SDK jars through Maven Central's canonical HTTPS host.
+            it.systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
+        }
+    }
+}
 dependencies { testImplementation("org.robolectric:robolectric:4.17") }
