@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { sql, type SQL } from "drizzle-orm";
 import pg from "pg";
+import { normalizeDatabaseValue } from "./serialization.js";
 export { sql };
 export type Row = Record<string, unknown>;
 export interface Database {
@@ -16,7 +17,7 @@ export function connect(connectionString: string): Database {
   ): Database => ({
     async query<T>(q: SQL) {
       const result = await executor.execute(q);
-      return result.rows as T[];
+      return normalizeDatabaseValue(result.rows) as T[];
     },
     transaction: (run) => executor.transaction((tx) => run(wrap(tx))),
     close: () => pool.end(),

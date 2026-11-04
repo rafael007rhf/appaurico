@@ -30,3 +30,4 @@ infra/local-tls/
 app/src/debug/res/raw/aurico_local_ca.crt
 app/src/debug/res/xml/aurico_network.xml
 .integration/
+!.env.production.example

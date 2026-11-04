@@ -66,3 +66,7 @@ Implementados: autorização por vínculo; convites/consentimento/revogação; t
 Adicionados: importação assistida de legados com confirmação e prevenção de repetição; filtros/gráfico Android por período e intervalo de sessão; comparação descritiva entre sessões no painel; solicitações de direitos, revisão cadastral e revisão de representação com fila operacional auditada; login real testado com Keycloak local.
 
 Ainda dependem de homologação: aprovação da política de retenção/exclusão, procedimento efetivo de purge e backups, comprovação profissional na fonte competente, habilitação do acesso de responsáveis e testes de notificações em aparelhos físicos. A proposta inicial está em [POLICY-DRAFT.md](docs/POLICY-DRAFT.md). Consulte o relatório de verificação antes de assumir cobertura ou prontidão para produção.
+
+## Integração conectada
+
+O guia atualizado é [LIVE-INTEGRATION.md](docs/LIVE-INTEGRATION.md), com auditoria em [INTEGRATION-AUDIT.md](docs/INTEGRATION-AUDIT.md). Ele documenta os serviços reais, o APK HTTPS de desenvolvimento, o encaminhamento ADB e o cenário nativo aprovado. Este APK conectado usa `https://localhost:8443` somente com encaminhamento explícito para o computador; não é um serviço público remoto.

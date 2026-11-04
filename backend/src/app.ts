@@ -71,7 +71,18 @@ export async function buildApp(
       .send({ error: { code: "INTERNAL_ERROR", requestId: req.id } });
   });
   app.get("/api/v1/openapi", { config: { public: true } }, async () => openapi);
-  app.get("/ready",{config:{public:true}},async(_req,reply)=>{try{const versions=await db.query(sql`SELECT version FROM schema_migration ORDER BY version`);if(!versions.some(row=>row.version==="0002"))return reply.code(503).send({status:"not_ready"});return {status:"ready"};}catch{return reply.code(503).send({status:"not_ready"});}});
+  app.get("/ready", { config: { public: true } }, async (_req, reply) => {
+    try {
+      const versions = await db.query(
+        sql`SELECT version FROM schema_migration ORDER BY version`,
+      );
+      if (!versions.some((row) => row.version === "0002"))
+        return reply.code(503).send({ status: "not_ready" });
+      return { status: "ready" };
+    } catch {
+      return reply.code(503).send({ status: "not_ready" });
+    }
+  });
   app.get("/health", { config: { public: true } }, async () => ({
     status: "ok",
   }));

@@ -74,3 +74,27 @@ O runner só aceita emulador dedicado. As credenciais sintéticas ficam em arqui
 Use `backend/.env.production.example`. O PostgreSQL gerenciado precisa de validação TLS completa; configure certificados exigidos pelo provedor, sem desabilitar a verificação. Execute as migrações como etapa controlada, com backup anterior e usuário apropriado. Mantenha a API atrás de reverse proxy; o processo atual escuta loopback. O painel usa proxy no mesmo domínio e não requer CORS aberto.
 
 Valide `/ready`, callback web HTTPS e redirect Android exatos no provedor, SMTP real para cadastro/recuperação, rotação de segredos, auditoria, retenção e política de backup. Antes de atualização, faça backup PostgreSQL com ferramenta compatível, cifre o arquivo e teste restauração em banco isolado. Nunca envie dumps a Git. Não usar a CA local ou o `start-dev` do Keycloak em produção.
+
+## Resultado executado nesta entrega
+
+- PostgreSQL nativo real: cluster persistente local e banco exclusivo `aurico_integration`, com migrações 0001 e 0002 executadas.
+- Keycloak 26.8.1 real, gateway HTTPS e painel Next.js de produção em execução local durante o teste.
+- Emulador Android API 35 ARM64: `LivePlatformIntegrationTest` executado, uma execução aprovada, zero falhas, zero cenários pulados. A fase do cenário levou aproximadamente dez segundos, além da instalação/build.
+- Fluxo coberto: identidade paciente autenticada no Android por AppAuth/PKCE; profissional cadastrado via API autenticada; convite aceito; vínculo persistido; plano publicado; Room recebendo dados; um registro online e um offline; estimulação; replay idempotente; profissional não vinculado recusado; painel React renderizando os registros; revogação; logout e preservação de histórico.
+- Conferência independente no PostgreSQL após o cenário aprovado: dois registros de sintomas e uma estimulação do cenário; tratamentos das tentativas sintéticas anteriores permaneceram isolados e identificados como teste.
+- Os testes anteriores encontraram um erro real de contrato de timestamps do driver PostgreSQL. A API agora serializa datas em ISO 8601, inclusive dentro de JSONB de sincronização já existente. O normalizador é idempotente e não altera texto de observações ou datas sem horário.
+- Suíte rápida: 18 testes de API/serialização aprovados. Build, lint e testes JVM Android passaram nas verificações locais. O teste nativo não substitui homologação da navegação por navegador externo e de aparelhos físicos.
+
+## Backup e restauração
+
+A operação real deve usar uma ferramenta `pg_dump` compatível com a versão do servidor. Configure host/usuário/TLS e autenticação por serviço ou arquivo `.pgpass` com permissão 0600; não passe senha na linha de comando. Exemplo, com as variáveis PostgreSQL já configuradas:
+
+```sh
+# Destino em volume cifrado, restrito e fora do repositório.
+pg_dump --format=custom --file=/CAMINHO_PROTEGIDO/aurico.dump
+# Restauração de validação em banco NOVO e isolado, nunca sobre produção.
+createdb aurico_restore_validation
+pg_restore --exit-on-error --no-owner --dbname=aurico_restore_validation /CAMINHO_PROTEGIDO/aurico.dump
+```
+
+Compare versões de migração, contagens, índices, restrições e um fluxo autorizado antes de considerar o backup recuperável. A política de retenção e a proteção do arquivo precisam ser aprovadas pela operação. O script `scripts/verify-test-backup.mjs` automatiza a comparação somente para o banco local de integração; requer os binários de cliente PostgreSQL em `PG_BIN`. Ele não foi executado neste host, cujo pacote nativo contém o servidor, mas não `pg_dump`/`pg_restore`.

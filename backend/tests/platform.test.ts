@@ -694,3 +694,24 @@ test("professional self enrollment is server controlled and refuses existing pat
     0,
   );
 });
+
+test("an expired invitation cannot create or reactivate a link", async () => {
+  const invite = await call("POST", "/api/v1/patient-invitations", "pro", {
+    email: "patient@example.invalid",
+  });
+  assert.equal(invite.statusCode, 201);
+  await db.query(
+    sql`UPDATE patient_invitation SET expires_at=now()-interval '1 second' WHERE id=${invite.json().id}`,
+  );
+  const accepted = await call(
+    "POST",
+    "/api/v1/patient-links/accept",
+    "patient",
+    { token: invite.json().token, consent: true, policyVersion: "2026-11-03" },
+  );
+  assert.equal(accepted.statusCode, 404);
+  const link = await db.query<{ status: string }>(
+    sql`SELECT status FROM patient_professional_link WHERE id=${linkId}`,
+  );
+  assert.equal(link[0].status, "revoked");
+});
