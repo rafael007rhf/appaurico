@@ -72,3 +72,9 @@ Este exemplo documenta o formato; não é um protocolo clínico nem um registro 
 ```
 
 Cada resultado contém `operationId`, `status:acknowledged` e `record` canônico, ou `status:rejected` e `code`. Repetir uma operação mantém seu ID e corpo; não gerar outro ID a cada retry. O servidor conserva recibo por usuário e operação. Dados fora do tratamento, escala inválida, ocorrência futura/cancelada, vínculo revogado e correção concorrente são recusados. Registros recusados devem permanecer locais para revisão.
+
+## Governança
+
+`GET/POST /governance/requests`: protocolos da própria conta. Tipos: `deletion` com confirmação explícita; `professional_verification` com registro, jurisdição e referência privada de evidência; `guardian_review` com relação, referência de evidência e confirmação. Pedidos abertos duplicados são recusados. `POST /governance/requests/:id/cancel` permite cancelar pedidos próprios ainda não decididos.
+
+`GET /operations/requests` e `POST /operations/requests/:id/review` exigem papel OIDC `aurico-operations`. Revisão usa versão otimista, justificativa e confirmação de evidência verificada. É proibida autoaprovação. Somente verificação profissional pode receber aprovação nessa interface; exclusão e representação exigem procedimento externo aprovado. O snapshot de tratamento agora inclui somente ID/data de sessões, sem notas privadas.

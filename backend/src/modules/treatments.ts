@@ -40,7 +40,18 @@ export async function snapshot(db: Database, id: string) {
         sql`SELECT a.* FROM auricular_point a JOIN treatment_point p ON p.point_id=a.id WHERE p.plan_version_id=${plan.id}`,
       )
     : [];
-  return { treatment, plan, symptoms, occurrences, appointments, points };
+  const sessions = await db.query(
+    sql`SELECT id,occurred_at FROM treatment_session WHERE treatment_id=${id} ORDER BY occurred_at,id`,
+  );
+  return {
+    treatment,
+    plan,
+    symptoms,
+    occurrences,
+    appointments,
+    points,
+    sessions,
+  };
 }
 async function edit<T>(
   db: Database,
@@ -270,11 +281,19 @@ export function registerTreatments(app: FastifyInstance, db: Database) {
       .strict()
       .parse(req.body);
     const sessionId = randomUUID();
-    await edit(db, actor, id, async (tx) => {
+    await edit(db, actor, id, async (tx, treatment) => {
       await tx.query(
         sql`INSERT INTO treatment_session(id,treatment_id,occurred_at,notes) VALUES(${sessionId},${id},${body.occurredAt},${body.notes ?? null})`,
       );
       await audit(tx, actor, "session.create", id);
+      if (treatment.status !== "draft")
+        await change(
+          tx,
+          treatment.patient_id,
+          "treatment",
+          id,
+          await snapshot(tx, id),
+        );
     });
     return reply.code(201).send({ id: sessionId });
   });

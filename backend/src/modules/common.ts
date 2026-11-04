@@ -10,6 +10,7 @@ export class ApiError extends Error {
   }
 }
 export type Actor = {
+  operations_access?: boolean;
   id: string;
   role: "patient" | "professional";
   email: string | null;

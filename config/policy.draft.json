@@ -1,0 +1,11 @@
+{
+  "version":"2026-11-04-draft",
+  "approvedForProduction":false,
+  "automaticClinicalDeletionEnabled":false,
+  "clinicalRetentionDays":null,
+  "proposedTechnicalLogRetentionDays":30,
+  "proposedBackupWindowDays":30,
+  "proposedInitialRequestReviewBusinessDays":5,
+  "guardianAccessEnabled":false,
+  "professionalSelfVerificationEnabled":false
+}

@@ -80,6 +80,12 @@ before(async () => {
       "utf8",
     ),
   );
+  await pg.exec(
+    await readFile(
+      new URL("../migrations/0002_governance.sql", import.meta.url),
+      "utf8",
+    ),
+  );
   for (const [name, role] of [
     ["pro", "professional"],
     ["otherPro", "professional"],
@@ -518,4 +524,128 @@ test("schedule handles DST, duplicates, bounds, and no-denominator adherence", (
     planInput.safeParse({ ...plan, endsOn: "2020-01-01" }).success,
     false,
   );
+});
+
+test("privacy requests are owned, cancellable, and never delete data automatically", async () => {
+  const request = await call("POST", "/api/v1/governance/requests", "patient", {
+    kind: "deletion",
+    confirmed: true,
+  });
+  assert.equal(request.statusCode, 201, request.body);
+  const id = request.json().id;
+  assert.equal(
+    (await call("GET", "/api/v1/governance/requests", "otherPatient")).json()
+      .items.length,
+    0,
+  );
+  assert.equal(
+    (await call("GET", "/api/v1/operations/requests", "pro")).statusCode,
+    403,
+  );
+  assert.equal(
+    (
+      await call(
+        "POST",
+        `/api/v1/governance/requests/${id}/cancel`,
+        "otherPatient",
+        {},
+      )
+    ).statusCode,
+    404,
+  );
+  assert.equal(
+    (
+      await call(
+        "POST",
+        `/api/v1/governance/requests/${id}/cancel`,
+        "patient",
+        {},
+      )
+    ).statusCode,
+    200,
+  );
+  assert.ok(
+    (await call("GET", "/api/v1/export", "patient")).json().symptomLogs.length >
+      0,
+  );
+});
+test("only a separate operations identity can review professional verification", async () => {
+  const requested = await call(
+    "POST",
+    "/api/v1/governance/requests",
+    "otherPro",
+    {
+      kind: "professional_verification",
+      registration: "TEST-REG",
+      jurisdiction: "Test jurisdiction",
+      evidenceReference: "Private test evidence",
+    },
+  );
+  assert.equal(requested.statusCode, 201, requested.body);
+  const id = requested.json().id;
+  tokens.operator = await new SignJWT({
+    realm_access: { roles: ["professional", "aurico-operations"] },
+    name: "Operator test",
+  })
+    .setProtectedHeader({ alg: "RS256" })
+    .setIssuer(issuer)
+    .setAudience(audience)
+    .setSubject("operator-test")
+    .setIssuedAt()
+    .setExpirationTime("1h")
+    .sign(keys.privateKey);
+  const decision = {
+    version: 1,
+    status: "approved",
+    decision: "Evidence verified in isolated integration test.",
+    evidenceChecked: true,
+  };
+  assert.equal(
+    (
+      await call(
+        "POST",
+        `/api/v1/operations/requests/${id}/review`,
+        "pro",
+        decision,
+      )
+    ).statusCode,
+    403,
+  );
+  assert.equal(
+    (
+      await call(
+        "POST",
+        `/api/v1/operations/requests/${id}/review`,
+        "operator",
+        decision,
+      )
+    ).statusCode,
+    200,
+  );
+  assert.equal(
+    (await call("GET", "/api/v1/me", "otherPro")).json().profile
+      .verification_status,
+    "verified",
+  );
+  assert.equal(
+    (
+      await call(
+        "POST",
+        `/api/v1/operations/requests/${id}/review`,
+        "operator",
+        decision,
+      )
+    ).statusCode,
+    409,
+  );
+});
+test("patient snapshots contain session metadata but exclude professional notes", async () => {
+  const response = await call(
+    "GET",
+    `/api/v1/treatments/${treatmentId}`,
+    "patient",
+  );
+  assert.equal(response.statusCode, 200);
+  assert.ok(response.json().sessions.length > 0);
+  assert.equal(response.json().sessions[0].notes, undefined);
 });

@@ -9,6 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -176,9 +178,15 @@ private fun History(t: StoredTreatment?, all: List<PatientEvent>, vm: PatientVie
     var symptom by rememberSaveable(t?.id) { mutableStateOf("") }
     var correction by remember { mutableStateOf<PatientEvent?>(null) }
     var correctedLevel by remember { mutableIntStateOf(0) }
+    var from by rememberSaveable(t?.id) { mutableStateOf("") }
+    var to by rememberSaveable(t?.id) { mutableStateOf("") }
+    var sessionId by rememberSaveable(t?.id) { mutableStateOf("") }
+    var reviewLegacy by rememberSaveable { mutableStateOf(false) }
+    var importId by remember { mutableStateOf<Long?>(null) }
+    var confirmed by remember { mutableStateOf(false) }
     val storedLegacy by vm.legacyRecords.collectAsStateWithLifecycle()
     val account by vm.account.collectAsStateWithLifecycle()
-    val legacy = if (account == "local") storedLegacy else emptyList()
+    val legacy = if (account == "local" || reviewLegacy) storedLegacy else emptyList()
     PatientColumn {
         Text("Histórico", style = MaterialTheme.typography.headlineSmall)
         if (t != null) {
@@ -186,9 +194,23 @@ private fun History(t: StoredTreatment?, all: List<PatientEvent>, vm: PatientVie
             val symptoms = jsonItems(JSONObject(t.snapshot), "symptoms")
             symptoms.forEach { s -> OutlinedButton(onClick = { symptom = s.getString("id") }) { Text(s.getString("name")) } }
             val selected = symptom.ifEmpty { symptoms.firstOrNull()?.getString("id") ?: "" }
-            val events = all.filter { it.treatmentId == t.id && it.kind == "symptom" && JSONObject(it.payload).optString("symptomId") == selected }
-            val replaced = events.map { JSONObject(it.payload).optString("correctionOf") }.toSet()
-            val current = events.filter { it.id !in replaced }
+            val sessions = jsonItems(JSONObject(t.snapshot), "sessions")
+            OutlinedTextField(from,{ from=it.take(10) },label={Text("Desde (AAAA-MM-DD)")},modifier=Modifier.fillMaxWidth(),isError=from.isNotEmpty() && runCatching { LocalDate.parse(from) }.isFailure)
+            OutlinedTextField(to,{ to=it.take(10) },label={Text("Até (AAAA-MM-DD)")},modifier=Modifier.fillMaxWidth(),isError=to.isNotEmpty() && runCatching { LocalDate.parse(to) }.isFailure)
+            OutlinedButton(onClick={sessionId=""}) {Text("Todas as sessões")}
+            sessions.forEach { session -> OutlinedButton(onClick={sessionId=session.getString("id")}) {Text("Sessão: "+moment(Instant.parse(session.getString("occurred_at")).toEpochMilli()))} }
+            val sessionStart=sessions.firstOrNull { it.getString("id")==sessionId }?.getString("occurred_at")?.let(Instant::parse)
+            val sessionEnd=sessionStart?.let { start -> sessions.map { Instant.parse(it.getString("occurred_at")) }.firstOrNull { it>start } }
+            val matching = all.filter { it.treatmentId == t.id && it.kind == "symptom" && JSONObject(it.payload).optString("symptomId") == selected }
+            val replacedAll=matching.map { JSONObject(it.payload).optString("correctionOf") }.toSet()
+            val events=matching.filter { e ->
+                val day=Instant.ofEpochMilli(e.occurredAt).atZone(ZoneId.of(t.timezone)).toLocalDate().toString()
+                (from.isEmpty() || day>=from) && (to.isEmpty() || day<=to) && (sessionStart==null || Instant.ofEpochMilli(e.occurredAt)>=sessionStart) && (sessionEnd==null || Instant.ofEpochMilli(e.occurredAt)<sessionEnd)
+            }
+            val replaced = replacedAll
+            val current = events.filter { it.id !in replaced && it.syncState!="duplicate" }
+            val scale=symptoms.firstOrNull { it.getString("id")==selected }
+            if(scale!=null) HistoryChart(current,scale.getInt("min_value"),scale.getInt("max_value"))
             if (current.size < 2) Text("Dados insuficientes para comparar a evolução.")
             else Text("Primeiro: ${JSONObject(current.first().payload).getInt("level")} · Último: ${JSONObject(current.last().payload).getInt("level")}. Valores informados por você, sem interpretação clínica automática.")
             events.asReversed().forEach { e ->
@@ -202,12 +224,26 @@ private fun History(t: StoredTreatment?, all: List<PatientEvent>, vm: PatientVie
                 }
             }
         }
+        if(account!="local" && t!=null) OutlinedButton(onClick={reviewLegacy=!reviewLegacy}) {Text(if(reviewLegacy) "Fechar revisão de legados" else "Revisar legados deste dispositivo")}
         if (legacy.isNotEmpty()) {
             Text("Registros locais e legados", style = MaterialTheme.typography.titleLarge)
             Text("Sem associação confirmada a um paciente ou tratamento remoto. Estes registros não são sincronizados.")
-            legacy.asReversed().forEach { Text("${moment(it.dataHora)} · Nível ${it.nivel}${it.nota?.let { note -> " · $note" } ?: ""}") }
+            legacy.asReversed().forEach { record ->
+                Text("${moment(record.dataHora)} · Nível ${record.nivel} · ${record.nota ?: ""}")
+                if(account!="local" && t!=null) OutlinedButton(onClick={importId=record.id;confirmed=false}) {Text("Revisar associação deste registro")}
+            }
         }
         if (all.isEmpty() && legacy.isEmpty()) Text("Seus registros aparecerão aqui depois do primeiro check-in.")
+    }
+    importId?.let { id ->
+        val original=storedLegacy.firstOrNull { it.id==id }
+        val symptoms=t?.let { jsonItems(JSONObject(it.snapshot),"symptoms") } ?: emptyList()
+        val target=symptoms.firstOrNull { it.getString("id")==symptom } ?: symptoms.firstOrNull()
+        if(original!=null && t!=null && target!=null) AlertDialog(onDismissRequest={importId=null},title={Text("Confirmar associação de legado")},text={Column {
+            Text("Conta: $account\nTratamento: ${t.title}\nSintoma: ${target.getString("name")}\nData original: ${moment(original.dataHora)}\nIntensidade: ${original.nivel}\nObservação: ${original.nota ?: ""}")
+            Text("Uma cópia será enviada ao profissional deste tratamento. O original permanece neste dispositivo.")
+            Row {Checkbox(confirmed,{confirmed=it});Text("Confirmo que este registro pertence a esta conta e a este tratamento.")}
+        }},confirmButton={TextButton(enabled=confirmed,onClick={vm.importLegacy(id,t.id,target.getString("id"));importId=null}) {Text("Associar e colocar na fila")}},dismissButton={TextButton(onClick={importId=null}) {Text("Cancelar")}})
     }
     correction?.let { event ->
         val data = JSONObject(event.payload)
@@ -238,4 +274,19 @@ private fun Account(vm: PatientViewModel, account: String, busy: Boolean, login:
         Text("Os horários seguem o plano profissional. O Android pode atrasar os avisos para economizar bateria. Nenhuma orientação clínica aparece na tela bloqueada.")
         Text("O armazenamento local é protegido pelo dispositivo. Use bloqueio de tela. Dados antigos não são atribuídos automaticamente à conta conectada.")
     }
+}
+
+@Composable
+private fun HistoryChart(events: List<PatientEvent>, min: Int, max: Int) {
+    if(events.size<2) return
+    val color=MaterialTheme.colorScheme.primary
+    val first=events.first().occurredAt;val last=events.last().occurredAt
+    androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(200.dp).semantics {contentDescription="Gráfico de intensidade, escala $min a $max. Valores detalhados no histórico."}) {
+        fun point(e: PatientEvent): Offset = Offset(8.dp.toPx()+((e.occurredAt-first).toFloat()/(last-first).coerceAtLeast(1))*(size.width-16.dp.toPx()),8.dp.toPx()+(1f-(JSONObject(e.payload).getInt("level")-min).toFloat()/(max-min))*(size.height-16.dp.toPx()))
+        val path=androidx.compose.ui.graphics.Path()
+        events.forEachIndexed { i,e -> val p=point(e); if(i==0)path.moveTo(p.x,p.y) else path.lineTo(p.x,p.y) }
+        drawPath(path,color,style=androidx.compose.ui.graphics.drawscope.Stroke(width=3.dp.toPx()))
+        events.forEach {drawCircle(color,4.dp.toPx(),point(it))}
+    }
+    Text("Escala: $min–$max · "+moment(first)+" a "+moment(last),style=MaterialTheme.typography.bodySmall)
 }

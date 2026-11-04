@@ -40,4 +40,29 @@ class PlatformMigrationTest {
             assertEquals(3, db.openHelper.readableDatabase.version)
         } finally { db.close(); context.deleteDatabase(name) }
     }
+
+    @Test fun legacyImportIsExplicitAtomicAndPreservesOriginal() = runBlocking {
+        val context=RuntimeEnvironment.getApplication()
+        try { androidx.work.WorkManager.initialize(context, androidx.work.Configuration.Builder().build()) } catch (_: IllegalStateException) { }
+        val db=Room.inMemoryDatabaseBuilder(context,AuricoDatabase::class.java).build()
+        val session=PatientSession(context)
+        val repository=PatientRepository(db,session,context)
+        val today=java.time.LocalDate.now().toString()
+        val now=System.currentTimeMillis()
+        val symptoms=org.json.JSONArray().put(org.json.JSONObject().put("id","symptom").put("min_value",0).put("max_value",10))
+        val snapshot=org.json.JSONObject().put("symptoms",symptoms).toString()
+        try {
+            val id=db.symptomLogDao().inserir(br.edu.ifpr.appaurico.data.local.entity.SymptomLogEntity(dataHora=now,nivel=6,nota="Original test record"))
+            db.platformDao().saveTreatment(StoredTreatment("treatment","account","professional","Test plan","active",today,today,"UTC",1,snapshot))
+            assertTrue(runCatching { repository.importLegacy("account",id,"treatment","symptom",false) }.isFailure)
+            assertTrue(db.platformDao().pending("account").isEmpty())
+            repository.importLegacy("account",id,"treatment","symptom",true)
+            assertEquals(1,db.platformDao().pending("account").size)
+            assertEquals(6,db.symptomLogDao().porId(id)!!.nivel)
+            assertEquals(now,db.platformDao().allEvents("account").single().occurredAt)
+            assertTrue(runCatching { repository.importLegacy("account",id,"treatment","symptom",true) }.isFailure)
+            assertEquals(1,db.platformDao().pending("account").size)
+            assertTrue(db.platformDao().pending("another-account").isEmpty())
+        } finally { androidx.work.WorkManager.getInstance(context).cancelAllWork(); db.close() }
+    }
 }

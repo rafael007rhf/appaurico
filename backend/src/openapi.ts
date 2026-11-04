@@ -2,6 +2,10 @@ import { z } from "zod";
 import { planInput } from "./modules/plans.js";
 import { operation } from "./modules/records.js";
 const operations: Record<string, string[]> = {
+  "/governance/requests": ["get","post"],
+  "/governance/requests/{id}/cancel": ["post"],
+  "/operations/requests": ["get"],
+  "/operations/requests/{id}/review": ["post"],
   "/me": ["get"],
   "/patients": ["get"],
   "/patient-invitations": ["post"],

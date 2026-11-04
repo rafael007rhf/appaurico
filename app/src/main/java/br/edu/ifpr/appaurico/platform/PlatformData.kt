@@ -18,6 +18,7 @@ data class SyncPosition(@PrimaryKey val accountId: String, val cursor: String)
 
 @Dao
 interface PlatformDao {
+    @Query("SELECT * FROM patient_event WHERE id=:id") suspend fun eventById(id: String): PatientEvent?
     @Query("SELECT * FROM platform_treatment WHERE accountId=:accountId ORDER BY startsOn DESC") fun treatments(accountId: String): Flow<List<StoredTreatment>>
     @Query("SELECT * FROM platform_treatment WHERE accountId=:accountId") suspend fun allTreatments(accountId: String): List<StoredTreatment>
     @Query("SELECT * FROM platform_treatment WHERE id=:id AND accountId=:accountId") suspend fun treatment(accountId: String, id: String): StoredTreatment?

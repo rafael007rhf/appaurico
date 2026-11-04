@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
     "migrate": "tsx --env-file=.env src/migrate.ts",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "test:oidc": "node --env-file=../.env --env-file=.env --import tsx tests/oidc.integration.ts"
   },
   "dependencies": {
     "fastify": "^5.12.8",

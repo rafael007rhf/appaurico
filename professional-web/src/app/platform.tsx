@@ -1,4 +1,5 @@
 "use client";
+import { Governance } from "./governance";
 import {
   useCallback,
   useEffect,
@@ -7,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 type User = {
+  operations_access?: boolean;
   id: string;
   display_name: string;
   role: "patient" | "professional";
@@ -282,6 +284,7 @@ export function Platform() {
     ["patients", "◎", "Pacientes"],
     ["treatments", "▤", "Tratamentos"],
     ["points", "⌖", "Biblioteca de pontos"],
+    ["governance", "◇", "Privacidade e cadastro"],
   ];
   return (
     <div className="shell">
@@ -293,7 +296,10 @@ export function Platform() {
         <nav aria-label="Navegação principal">
           {(user.role === "professional"
             ? items
-            : [["sharing", "◎", "Compartilhamento"]]
+            : [
+                ["sharing", "◎", "Compartilhamento"],
+                ["governance", "◇", "Privacidade e cadastro"],
+              ]
           ).map(([id, icon, label]) => (
             <button
               key={id}
@@ -348,7 +354,12 @@ export function Platform() {
           </span>
         </header>
         <main id="main-content">
-          {user.role === "patient" ? (
+          {tab === "governance" ? (
+            <Governance
+              operator={user.operations_access === true}
+              professional={user.role === "professional"}
+            />
+          ) : user.role === "patient" ? (
             <Sharing />
           ) : selected ? (
             <TreatmentDetail id={selected} back={() => setSelected(null)} />
@@ -1223,6 +1234,7 @@ function TreatmentDetail({ id, back }: { id: string; back: () => void }) {
     [notes, setNotes] = useState(""),
     [at, setAt] = useState(""),
     [symptom, setSymptom] = useState(""),
+    [sessionFilter, setSessionFilter] = useState(""),
     [from, setFrom] = useState(""),
     [to, setTo] = useState("");
   const reload = () => {
@@ -1268,9 +1280,23 @@ function TreatmentDetail({ id, back }: { id: string; back: () => void }) {
     corrected = new Set(logs.map((l) => l.correction_of)),
     symptoms = [...new Map(logs.map((l) => [l.symptom_id, l.name])).entries()];
   const chosen = symptom || symptoms[0]?.[0];
+  const orderedSessions = [...(sessions.data?.items ?? [])].sort(
+    (a, b) =>
+      new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime(),
+  );
+  const intervalStart = orderedSessions.find(
+    (s) => s.id === sessionFilter,
+  )?.occurred_at;
+  const intervalEnd = intervalStart
+    ? orderedSessions.find(
+        (s) => new Date(s.occurred_at) > new Date(intervalStart),
+      )?.occurred_at
+    : undefined;
   const visible = logs.filter(
     (l) =>
       l.symptom_id === chosen &&
+      (!intervalStart || new Date(l.occurred_at) >= new Date(intervalStart)) &&
+      (!intervalEnd || new Date(l.occurred_at) < new Date(intervalEnd)) &&
       !corrected.has(l.id) &&
       (!from || l.occurred_at.slice(0, 10) >= from) &&
       (!to || l.occurred_at.slice(0, 10) <= to),
@@ -1430,7 +1456,68 @@ function TreatmentDetail({ id, back }: { id: string; back: () => void }) {
             />
           </label>
         </div>
+        <label>
+          Intervalo de sessão
+          <select
+            value={sessionFilter}
+            onChange={(e) => setSessionFilter(e.target.value)}
+          >
+            <option value="">Todas as sessões</option>
+            {orderedSessions.map((s) => (
+              <option key={s.id} value={s.id}>
+                {date(s.occurred_at)}
+              </option>
+            ))}
+          </select>
+        </label>
         <Chart logs={visible} />
+        <h3>Comparação descritiva entre sessões</h3>
+        <p className="muted">
+          Registros no intervalo entre uma sessão e a seguinte. Médias são dados
+          calculados, sem interpretação clínica.
+        </p>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Desde a sessão</th>
+                <th>Registros</th>
+                <th>Primeiro</th>
+                <th>Último</th>
+                <th>Média informada</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orderedSessions.map((session, i) => {
+                const next = orderedSessions[i + 1];
+                const values = logs.filter(
+                  (l) =>
+                    l.symptom_id === chosen &&
+                    !corrected.has(l.id) &&
+                    new Date(l.occurred_at) >= new Date(session.occurred_at) &&
+                    (!next ||
+                      new Date(l.occurred_at) < new Date(next.occurred_at)),
+                );
+                return (
+                  <tr key={session.id}>
+                    <td>{date(session.occurred_at)}</td>
+                    <td>{values.length}</td>
+                    <td>{values[0]?.level ?? "—"}</td>
+                    <td>{values.at(-1)?.level ?? "—"}</td>
+                    <td>
+                      {values.length
+                        ? (
+                            values.reduce((n, l) => n + l.level, 0) /
+                            values.length
+                          ).toFixed(1)
+                        : "Dados insuficientes"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
         <p className="muted">
           Valores informados pelo paciente. Correções substituem os valores no
           gráfico e preservam o histórico abaixo.

@@ -1,11 +1,104 @@
 {
- "realm":"aurico","enabled":true,"registrationAllowed":true,"resetPasswordAllowed":true,"verifyEmail":true,"loginWithEmailAllowed":true,"duplicateEmailsAllowed":false,
- "sslRequired":"external","accessTokenLifespan":300,"ssoSessionIdleTimeout":1800,"ssoSessionMaxLifespan":3600,
- "roles":{"realm":[{"name":"patient"},{"name":"professional"}]},
- "defaultRole":{"name":"default-roles-aurico","composite":true,"composites":{"realm":["patient"]}},
- "smtpServer":{"host":"mailpit","port":"1025","from":"aurico@example.invalid","auth":"false","ssl":"false","starttls":"false"},
- "clients":[
-  {"clientId":"aurico-web","enabled":true,"protocol":"openid-connect","publicClient":false,"secret":"GENERATED_BY_SETUP","standardFlowEnabled":true,"directAccessGrantsEnabled":false,"redirectUris":["http://127.0.0.1:3000/api/v1/auth/callback"],"webOrigins":["http://127.0.0.1:3000"],"attributes":{"pkce.code.challenge.method":"S256"},"protocolMappers":[{"name":"api-audience","protocol":"openid-connect","protocolMapper":"oidc-audience-mapper","config":{"included.custom.audience":"aurico-api","access.token.claim":"true","id.token.claim":"false"}}]},
-  {"clientId":"aurico-android","enabled":true,"protocol":"openid-connect","publicClient":true,"standardFlowEnabled":true,"directAccessGrantsEnabled":false,"redirectUris":["br.edu.ifpr.appaurico:/oauth2redirect"],"attributes":{"pkce.code.challenge.method":"S256"},"protocolMappers":[{"name":"api-audience","protocol":"openid-connect","protocolMapper":"oidc-audience-mapper","config":{"included.custom.audience":"aurico-api","access.token.claim":"true","id.token.claim":"false"}}]}
- ]
+  "realm": "aurico",
+  "enabled": true,
+  "registrationAllowed": true,
+  "resetPasswordAllowed": true,
+  "verifyEmail": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "sslRequired": "external",
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 3600,
+  "roles": {
+    "realm": [
+      {
+        "name": "patient"
+      },
+      {
+        "name": "professional"
+      },
+      {
+        "name": "aurico-operations"
+      },
+      {
+        "name": "default-roles-aurico",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "patient"
+          ]
+        }
+      }
+    ]
+  },
+  "defaultRole": {
+    "name": "default-roles-aurico"
+  },
+  "smtpServer": {
+    "host": "mailpit",
+    "port": "1025",
+    "from": "aurico@example.invalid",
+    "auth": "false",
+    "ssl": "false",
+    "starttls": "false"
+  },
+  "clients": [
+    {
+      "clientId": "aurico-web",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "GENERATED_BY_SETUP",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://127.0.0.1:3000/api/v1/auth/callback"
+      ],
+      "webOrigins": [
+        "http://127.0.0.1:3000"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "aurico-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "aurico-android",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "br.edu.ifpr.appaurico:/oauth2redirect"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "aurico-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ]
 }

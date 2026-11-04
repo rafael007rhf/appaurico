@@ -55,7 +55,10 @@ export async function provision(
       await tx.query(
         sql`INSERT INTO professional_profile(user_id) VALUES(${user!.id}) ON CONFLICT DO NOTHING`,
       );
-    return user!;
+    return {
+      ...user!,
+      operations_access: realm?.roles?.includes("aurico-operations") === true,
+    };
   });
 }
 export async function registerAuth(
@@ -104,7 +107,7 @@ export async function registerAuth(
       const token = req.cookies.aurico_session;
       if (!token) throw new ApiError(401, "UNAUTHENTICATED");
       const [user] = await db.query<Actor>(
-        sql`SELECT u.* FROM app_user u JOIN web_session s ON s.user_id=u.id WHERE s.token_hash=${hash(token)} AND s.expires_at>now()`,
+        sql`SELECT u.*,s.operations_access FROM app_user u JOIN web_session s ON s.user_id=u.id WHERE s.token_hash=${hash(token)} AND s.expires_at>now()`,
       );
       if (!user) throw new ApiError(401, "UNAUTHENTICATED");
       if (
@@ -167,7 +170,7 @@ export async function registerAuth(
       );
       const token = randomBytes(32).toString("base64url");
       await db.query(
-        sql`INSERT INTO web_session(token_hash,user_id,expires_at) VALUES(${hash(token)},${actor.id},now()+interval '1 hour')`,
+        sql`INSERT INTO web_session(token_hash,user_id,expires_at,operations_access) VALUES(${hash(token)},${actor.id},now()+interval '1 hour',${actor.operations_access === true})`,
       );
       reply.setCookie("aurico_session", token, cookie);
       return reply.redirect("/");

@@ -30,6 +30,20 @@ class PatientRepository @Inject constructor(val database: AuricoDatabase, val se
         persist(account, occurrence.treatmentId, "stimulation", JSONObject().put("id", UUID.randomUUID().toString())
             .put("treatmentId", occurrence.treatmentId).put("scheduledId", occurrence.id).put("occurredAt", Instant.now().toString()))
     }
+    suspend fun importLegacy(account: String, legacyId: Long, treatmentId: String, symptomId: String, confirmed: Boolean) {
+        require(account != "local" && confirmed) { "Confirme a conta e a associação antes de importar." }
+        val device = session.deviceId()
+        database.withTransaction {
+            val original = database.symptomLogDao().porId(legacyId) ?: error("Registro local indisponível")
+            val id = UUID.nameUUIDFromBytes("legacy:$device:$legacyId".toByteArray()).toString()
+            require(dao.eventById(id) == null) { "Este registro já foi associado. O original permanece preservado." }
+            val treatment = dao.treatment(account,treatmentId) ?: error("Tratamento indisponível")
+            val date = Instant.ofEpochMilli(original.dataHora).atZone(ZoneId.of(treatment.timezone)).toLocalDate()
+            require(date >= LocalDate.parse(treatment.startsOn) && date <= LocalDate.parse(treatment.endsOn)) { "A data original está fora do período deste tratamento." }
+            val data = JSONObject().put("id",id).put("treatmentId",treatmentId).put("symptomId",symptomId).put("level",original.nivel).put("note",original.nota).put("occurredAt",Instant.ofEpochMilli(original.dataHora).toString())
+            persist(account,treatmentId,"symptom",data)
+        }
+    }
     private suspend fun persist(account: String, treatmentId: String, kind: String, data: JSONObject) {
         database.withTransaction {
             val treatment = dao.treatment(account, treatmentId) ?: error("Tratamento indisponível")
@@ -46,7 +60,7 @@ class PatientRepository @Inject constructor(val database: AuricoDatabase, val se
             }
             val operationId = UUID.randomUUID().toString()
             val operation = JSONObject().put("operationId", operationId).put("kind", kind).put("data", data)
-            dao.saveEvent(PatientEvent(data.getString("id"), account, treatmentId, kind, data.toString(), System.currentTimeMillis(), "pending"))
+            dao.saveEvent(PatientEvent(data.getString("id"), account, treatmentId, kind, data.toString(), Instant.parse(data.getString("occurredAt")).toEpochMilli(), "pending"))
             dao.enqueue(OutboxOperation(operationId, account, data.getString("id"), operation.toString()))
         }
         scheduleSync()

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SymptomLogDao {
+    @Query("SELECT * FROM symptom_log WHERE id=:id") suspend fun porId(id: Long): SymptomLogEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun inserir(log: SymptomLogEntity): Long

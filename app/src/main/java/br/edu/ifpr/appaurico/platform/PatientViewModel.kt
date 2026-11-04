@@ -63,6 +63,10 @@ class PatientViewModel @Inject constructor(val repository: PatientRepository, pr
         legacy.registrar(SymptomLog(dataHora = System.currentTimeMillis(), nivel = level, nota = note.trim().ifBlank { null }))
         message.value = "Salvo somente neste dispositivo, sem associação a tratamento ou envio automático."
     }
+    fun importLegacy(id: Long, treatment: String, symptom: String) = run {
+        repository.importLegacy(account.value,id,treatment,symptom,true)
+        message.value = "Cópia associada salva na fila. O registro local original foi preservado."
+    }
     fun accept(token: String, consent: Boolean) = run {
         require(consent)
         repository.session.mutex.withLock {

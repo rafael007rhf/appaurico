@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import { registerGovernance } from "./modules/governance.js";
 import { openapi } from "./openapi.js";
 import cookie from "@fastify/cookie";
 import helmet from "@fastify/helmet";
@@ -55,14 +56,12 @@ export async function buildApp(
         .code(409)
         .send({ error: { code: "RESOURCE_CONFLICT", requestId: req.id } });
     if (e.statusCode && e.statusCode < 500)
-      return reply
-        .code(e.statusCode)
-        .send({
-          error: {
-            code: e.statusCode === 429 ? "RATE_LIMITED" : "INVALID_REQUEST",
-            requestId: req.id,
-          },
-        });
+      return reply.code(e.statusCode).send({
+        error: {
+          code: e.statusCode === 429 ? "RATE_LIMITED" : "INVALID_REQUEST",
+          requestId: req.id,
+        },
+      });
     req.log.error(
       { requestId: req.id, code: "INTERNAL_ERROR" },
       "Request failed",
@@ -80,5 +79,6 @@ export async function buildApp(
   registerTreatments(app, db);
   registerRecords(app, db);
   registerReporting(app, db);
+  registerGovernance(app, db);
   return app;
 }

@@ -31,7 +31,7 @@ O cursor é uma revisão por paciente. Escritas adquirem lock na linha do pacien
 
 `semente.db` e as tabelas `symptom_log`, `stimulation`, `reminder` são preservados byte a byte quanto aos valores. A migração cria tabelas da plataforma e seus índices. Não transforma dados antigos em registros remotos, não inventa paciente e não muda intensidades/datas.
 
-Os dados antigos aparecem na seção “Registros locais e legados”. A associação assistida e importação para tratamento remoto **ainda não foi implementada**: precisa de seleção de conta/tratamento/sintoma, prévia e confirmação explícita. Até lá, nenhum legado entra na fila.
+Os dados antigos aparecem na seção “Registros locais e legados”. A associação assistida está disponível no Histórico de uma conta conectada: selecione tratamento e sintoma, abra a revisão de legados e confirme explicitamente a prévia. A cópia mantém a data e intensidade originais; a escala e o período são validados. Um identificador estável por dispositivo e registro impede repetir a associação. O original não é removido. Sem confirmação, o legado não entra na fila.
 
 A demonstração usa outro pacote e `aurico-demo.db`. Seus controles de limpeza não alcançam `semente.db`.
 
