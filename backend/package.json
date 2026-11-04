@@ -1,0 +1,32 @@
+{
+  "name": "@aurico/backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=.env src/server.ts",
+    "start": "node --env-file=.env dist/server.js",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "migrate": "tsx --env-file=.env src/migrate.ts",
+    "test": "tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "fastify": "^5.12.8",
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/helmet": "^13.0.2",
+    "@fastify/rate-limit": "^10.3.0",
+    "drizzle-orm": "^0.45.4",
+    "pg": "^8.16.3",
+    "jose": "^6.1.0",
+    "openid-client": "^6.8.0",
+    "zod": "^4.1.12",
+    "luxon": "^3.7.2",
+    "pdfkit": "^0.17.2"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14",
+    "@types/pg": "^8.15.5",
+    "@types/luxon": "^3.7.1",
+    "@types/pdfkit": "^0.17.3"
+  }
+}

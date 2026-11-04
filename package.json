@@ -1,0 +1,28 @@
+{
+  "name": "aurico-platform",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "professional-web"
+  ],
+  "scripts": {
+    "test": "npm test -w backend",
+    "typecheck": "npm run typecheck --workspaces",
+    "lint": "eslint backend/src backend/tests professional-web/src",
+    "build": "npm run build --workspaces"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "tsx": "^4.20.6",
+    "@types/node": "^22.19.0",
+    "eslint": "^10.14.0",
+    "@eslint/js": "^10.0.1",
+    "typescript-eslint": "^8.46.0"
+  },
+  "engines": {
+    "node": ">=22.16"
+  },
+  "overrides": {
+    "minimatch": "^11.0.4"
+  }
+}
