@@ -715,3 +715,75 @@ test("an expired invitation cannot create or reactivate a link", async () => {
   );
   assert.equal(link[0].status, "revoked");
 });
+
+test("only the creating professional can list and cancel a pending invitation", async () => {
+  const created = await call("POST", "/api/v1/patient-invitations", "pro", {
+    email: "patient@example.invalid",
+  });
+  assert.equal(created.statusCode, 201);
+  const { id, token } = created.json();
+  const listed = (
+    await call("GET", "/api/v1/patient-invitations", "pro")
+  ).json();
+  const pending = listed.items.find((item: { id: string }) => item.id === id);
+  assert.ok(pending);
+  assert.equal(pending.token_hash, undefined);
+  assert.equal(pending.token, undefined);
+  assert.equal(
+    (await call("GET", "/api/v1/patient-invitations", "otherPro"))
+      .json()
+      .items.some((item: { id: string }) => item.id === id),
+    false,
+  );
+  assert.equal(
+    (await call("GET", "/api/v1/patient-invitations", "patient")).statusCode,
+    403,
+  );
+  assert.equal(
+    (await call("DELETE", `/api/v1/patient-invitations/${id}`, "patient"))
+      .statusCode,
+    403,
+  );
+  assert.equal(
+    (await call("DELETE", `/api/v1/patient-invitations/${id}`, "otherPro"))
+      .statusCode,
+    404,
+  );
+  assert.equal(
+    (await call("DELETE", `/api/v1/patient-invitations/${id}`, "pro"))
+      .statusCode,
+    200,
+  );
+  assert.equal(
+    (
+      await call("POST", "/api/v1/patient-links/accept", "patient", {
+        token,
+        consent: true,
+        policyVersion: "2026-11-03",
+      })
+    ).statusCode,
+    404,
+  );
+  assert.equal(
+    (await call("GET", "/api/v1/patient-invitations", "pro"))
+      .json()
+      .items.some((item: { id: string }) => item.id === id),
+    false,
+  );
+  assert.equal(
+    (
+      await db.query(
+        sql`SELECT id FROM audit_event WHERE resource_id=${id} AND action='invitation.revoke'`,
+      )
+    ).length,
+    1,
+  );
+  const [accepted] = await db.query<{ id: string }>(
+    sql`SELECT id FROM patient_invitation WHERE accepted_by=${ids.patient} LIMIT 1`,
+  );
+  assert.equal(
+    (await call("DELETE", `/api/v1/patient-invitations/${accepted.id}`, "pro"))
+      .statusCode,
+    404,
+  );
+});

@@ -2,13 +2,15 @@ import { z } from "zod";
 import { planInput } from "./modules/plans.js";
 import { operation } from "./modules/records.js";
 const operations: Record<string, string[]> = {
-  "/governance/requests": ["get","post"],
+  "/governance/requests": ["get", "post"],
   "/governance/requests/{id}/cancel": ["post"],
   "/operations/requests": ["get"],
   "/operations/requests/{id}/review": ["post"],
   "/me": ["get"],
+  "/me/enroll-professional": ["post"],
   "/patients": ["get"],
-  "/patient-invitations": ["post"],
+  "/patient-invitations": ["get", "post"],
+  "/patient-invitations/{id}": ["delete"],
   "/patient-links": ["get"],
   "/patient-links/accept": ["post"],
   "/patient-links/{id}": ["delete"],
@@ -28,6 +30,12 @@ const operations: Record<string, string[]> = {
   "/auth/logout": ["post"],
 };
 const bodies: Record<string, unknown> = {
+  "post /me/enroll-professional": {
+    type: "object",
+    additionalProperties: false,
+    required: ["confirmed"],
+    properties: { confirmed: { const: true } },
+  },
   "post /treatments": {
     type: "object",
     required: ["patientId", "plan"],

@@ -11,6 +11,7 @@ Base preservada: `182b164fa24f5863b7da7af5cb392d1525b395a4`. Branch nova: `featu
 | Room/sync | Persistência/fila implementadas; sem evidência nativa contra servidor real | Cenário completo executado no emulador, com registro offline, replay e conferência no servidor |
 | Datas de rede | Driver PostgreSQL podia entregar timestamps em formato SQL | ISO 8601 estável em linhas e JSONB já armazenado; teste de regressão |
 | Vínculos | Revogação disponível na API/web | Consulta e revogação também na tela Conta Android |
+| Convites pendentes | Expiração e uso único, sem cancelamento pelo criador | Listagem paginada e cancelamento auditado na API/painel; teste de isolamento e aceitação recusada |
 | Painel | Consultas reais, atualização manual | Polling moderado quando visível; renderização dos registros comprovada em WebView de teste |
 | Retentativas | Lotes incompletos podiam permanecer em loop | Resposta precisa confirmar exatamente os IDs enviados; fila preservada ao recusar confirmação incompleta |
 | Desenvolvimento | Compose HTTP sem instrução prática de acesso Android | Overlay HTTPS, CA local restrita, scripts de fixture/runner e encaminhamento ADB explícito |

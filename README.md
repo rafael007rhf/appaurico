@@ -37,6 +37,8 @@ O profissional cria convite para o e-mail do paciente e entrega o código por ca
 
 O papel `aurico-operations` é separado, atribuído no provedor apenas a operadores autorizados. Não é concedido pelo cadastro profissional.
 
+Convites pendentes aparecem em Pacientes e podem ser cancelados pelo profissional criador antes da aceitação. Os códigos são de uso único; cancelar um convite não revoga um vínculo já aceito.
+
 ## APK paciente conectado
 
 Requisitos Android: JDK 21, SDK 36.1, Build Tools 36.0.0.

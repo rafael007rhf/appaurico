@@ -60,6 +60,13 @@ class LivePlatformIntegrationTest {
         assertEquals(request.state,redirect.getQueryParameter("state"))
         session.finishLogin(AuthorizationResponse.Builder(request).fromUri(redirect).build().toIntent())
         val account=session.account.first();assertNotEquals("local",account)
+        val cancelled=api("/patient-invitations","POST",JSONObject().put("email",fixture.getString("patientUsername")+"@example.invalid"),expected=201)
+        api("/patient-invitations/"+cancelled.getString("id"),"DELETE",cookie=fixture.getString("strangerCookie"),expected=404)
+        api("/patient-invitations/"+cancelled.getString("id"),"DELETE")
+        try {
+            session.requestFor(account,"/patient-links/accept","POST",JSONObject().put("token",cancelled.getString("token")).put("consent",true).put("policyVersion","2026-11-03"))
+            fail("Cancelled invitation must not be accepted")
+        } catch (failure:ApiFailure) {assertEquals(404,failure.status)}
         session.requestFor(account,"/patient-links/accept","POST",JSONObject().put("token",fixture.getString("invitation")).put("consent",true).put("policyVersion","2026-11-03"))
         val patients=api("/patients").getJSONArray("items")
         assertTrue((0 until patients.length()).any {patients.getJSONObject(it).getString("id")==account})
@@ -97,8 +104,24 @@ class LivePlatformIntegrationTest {
         val duplicate=JSONObject().put("deviceId",session.deviceId()).put("operations",JSONArray().put(JSONObject(pending.payload)))
         repeat(2){session.requestFor(account,"/sync/push","POST",duplicate)}
         assertEquals(2,api("/treatments/$treatment/symptom-logs").getJSONArray("items").length())
+        api("/treatments/$treatment/sessions","POST",JSONObject().put("occurredAt",Instant.now().toString()).put("notes","Synthetic private professional note"),expected=201)
+        val revision=api("/treatments/$treatment").getJSONObject("treatment").getInt("version")
+        val revisedPlan=JSONObject(plan.toString()).put("title","INTEGRATION TEST revised plan")
+        val edited=api("/treatments/$treatment","PATCH",JSONObject().put("version",revision).put("plan",revisedPlan))
+        api("/treatments/$treatment/publish","POST",JSONObject().put("version",edited.getInt("version")))
+        repository.synchronize(account)
+        val received=repository.dao.treatment(account,treatment)!!
+        assertEquals("INTEGRATION TEST revised plan",received.title)
+        val snapshot=JSONObject(received.snapshot)
+        assertEquals(1,snapshot.getJSONArray("sessions").length())
+        assertFalse(snapshot.getJSONArray("sessions").getJSONObject(0).has("notes"))
+        Instant.parse(snapshot.getJSONArray("appointments").getJSONObject(0).getString("scheduled_at"))
+        assertEquals(2,api("/treatments/$treatment").getJSONArray("versions").length())
+        assertEquals(2,repository.dao.allEvents(account).count {it.treatmentId==treatment && it.kind=="symptom"})
         assertEquals(404,run {api("/treatments/$treatment",cookie=fixture.getString("strangerCookie"),expected=404);404})
         val dashboard=api("/dashboard");assertTrue(dashboard.getJSONArray("recent").length()>0)
+        val invitationEmail="integration-ui-"+fixture.getString("suffix")+"@example.invalid"
+        val uiInvitation=api("/patient-invitations","POST",JSONObject().put("email",invitationEmail),expected=201)
         val scenario=ActivityScenario.launch(MainActivity::class.java)
         var web:WebView?=null
         try {
@@ -109,6 +132,21 @@ class LivePlatformIntegrationTest {
             var displayed=false
             repeat(90){if(!displayed){val result=CountDownLatch(1);instrumentation.runOnMainSync {web!!.evaluateJavascript("document.body.innerText.includes('INTEGRATION TEST patient') && document.body.innerText.includes('Registros recentes')"){ displayed=it=="true";result.countDown() }};result.await(3,TimeUnit.SECONDS);if(!displayed)Thread.sleep(1000)}}
             assertTrue("Professional React panel must render synchronized patient records",displayed)
+            fun javascript(script:String):String {
+                val result=CountDownLatch(1);var value=""
+                instrumentation.runOnMainSync {web!!.evaluateJavascript(script){value=it;result.countDown()}}
+                assertTrue(result.await(5,TimeUnit.SECONDS));return value
+            }
+            fun waitForPage(predicate:String):Boolean {
+                repeat(60){if(javascript(predicate)=="true")return true;Thread.sleep(500)}
+                return false
+            }
+            javascript("[...document.querySelectorAll('nav button')].find(button=>button.textContent.includes('Pacientes')).click()")
+            assertTrue("Pending invitation must appear in the real professional panel",waitForPage("document.body.innerText.includes('$invitationEmail')"))
+            javascript("[...document.querySelectorAll('button')].find(button=>button.getAttribute('aria-label')==='Cancelar convite para $invitationEmail').click()")
+            assertTrue("Cancelled invitation must disappear from the panel",waitForPage("!document.body.innerText.includes('$invitationEmail')"))
+            val remaining=api("/patient-invitations").getJSONArray("items")
+            assertFalse((0 until remaining.length()).any {remaining.getJSONObject(it).getString("id")==uiInvitation.getString("id")})
         } finally {scenario.onActivity {web?.destroy()};scenario.close()}
         val links=session.requestFor(account,"/patient-links").getJSONArray("items")
         session.requestFor(account,"/patient-links/"+links.getJSONObject(0).getString("id"),"DELETE")

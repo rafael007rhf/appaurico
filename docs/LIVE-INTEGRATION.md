@@ -13,8 +13,8 @@ npm ci
 node scripts/setup-local.mjs        # apenas na primeira configuração
 node scripts/setup-https-local.mjs
 # O segundo arquivo define hostname e caminho HTTPS da identidade.
-docker compose -f compose.yaml -f compose.https-local.yaml up -d
-npm run migrate -w backend
+docker compose -f compose.yaml -f compose.https-local.yaml up -d --wait
+node --env-file=backend/.env.https --import tsx backend/src/migrate.ts
 ```
 
 Em terminais separados, a partir da raiz do repositório:
@@ -53,6 +53,7 @@ Para um aparelho fora do USB/rede de teste, configure URLs HTTPS públicas reais
 5. Faça check-in e confirme uma ocorrência. Desligue Wi-Fi/dados e faça outro registro; ele deve ficar pendente. Reconecte e sincronize.
 6. O painel consulta os dados persistidos e atualiza em até 30 segundos quando está visível. Sessões e retornos continuam no mesmo tratamento.
 7. A tela Conta do Android permite consultar e revogar vínculos. A revogação bloqueia os acessos profissionais e é recebida no próximo pull.
+8. Em Pacientes, a lista de convites pendentes permite cancelar um código antes da aceitação. Somente o criador pode listar ou cancelar seus convites; o cancelamento não altera um vínculo já aceito.
 
 ## Cenário automatizado nativo
 
@@ -90,10 +91,11 @@ Valide `/ready`, callback web HTTPS e redirect Android exatos no provedor, SMTP 
 - PostgreSQL nativo real: cluster persistente local e banco exclusivo `aurico_integration`, com migrações 0001 e 0002 executadas.
 - Keycloak 26.8.1 real, gateway HTTPS e painel Next.js de produção em execução local durante o teste.
 - Emulador Android API 35 ARM64: `LivePlatformIntegrationTest` executado, uma execução aprovada, zero falhas, zero cenários pulados. A fase do cenário levou aproximadamente dez segundos, além da instalação/build.
-- Fluxo coberto: identidade paciente autenticada no Android por AppAuth/PKCE; profissional cadastrado via API autenticada; convite aceito; vínculo persistido; plano publicado; Room recebendo dados; um registro online e um offline; estimulação; replay idempotente; profissional não vinculado recusado; painel React renderizando os registros; revogação; logout e preservação de histórico.
+- Fluxo coberto: identidade paciente autenticada no Android por AppAuth/PKCE; profissional cadastrado via API autenticada; convite cancelado rejeitado e convite válido aceito; vínculo persistido; plano publicado; Room recebendo dados; um registro online e um offline; estimulação; replay idempotente; sessão registrada; nova versão de plano recebida sem perda dos eventos; retorno e sessões no snapshot sem notas privadas; profissional não vinculado recusado; painel React renderizando os registros e cancelando um convite pelo botão real; revogação; logout e preservação de histórico.
 - Conferência independente no PostgreSQL após o cenário aprovado: dois registros de sintomas e uma estimulação do cenário; tratamentos das tentativas sintéticas anteriores permaneceram isolados e identificados como teste.
 - Os testes anteriores encontraram um erro real de contrato de timestamps do driver PostgreSQL. A API agora serializa datas em ISO 8601, inclusive dentro de JSONB de sincronização já existente. O normalizador é idempotente e não altera texto de observações ou datas sem horário.
-- Suíte rápida: 18 testes de API/serialização aprovados. Build, lint e testes JVM Android passaram nas verificações locais. O teste nativo não substitui homologação da navegação por navegador externo e de aparelhos físicos.
+- Cadastro público também exercitado via páginas reais do Keycloak: criação de conta, recebimento no Mailpit, confirmação de e-mail, definição de senha e callback com sessão autenticada na API. Esse teste usa uma identidade sintética própria; o teste instrumentado prepara identidades pela administração do provedor.
+- Suíte rápida: 19 testes de API/serialização aprovados, incluindo cancelamento de convites e isolamento entre criadores. Build, lint e testes JVM Android passaram nas verificações locais. O teste nativo não substitui homologação da navegação por navegador externo e de aparelhos físicos.
 
 ## Backup e restauração
 

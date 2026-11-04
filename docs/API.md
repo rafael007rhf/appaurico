@@ -13,8 +13,11 @@ Listagens: `page` a partir de 1, `limit` 1–100, padrão 30; `q` até 100 carac
 | Endpoint | Acesso e resultado |
 |---|---|
 | GET `/me` | Identidade interna e perfil; verificação profissional explícita |
+| POST `/me/enroll-professional` | Conta autenticada; `{confirmed:true}`; cria perfil profissional não verificado somente sem vínculos/tratamentos de paciente. Não concede privilégios operacionais |
 | GET `/patients` | Somente profissional; pacientes com vínculo ativo, pesquisa por nome |
 | POST `/patient-invitations` | Profissional; `{email}` → `{id, token, expiresInDays}`; token entregue uma vez, sem envio automático de e-mail |
+| GET `/patient-invitations` | Profissional; seus convites pendentes paginados, com ID/e-mail/validade; nunca retorna token nem hash |
+| DELETE `/patient-invitations/:id` | Somente profissional criador; invalida convite ainda pendente e audita. Aceitação e cancelamento são serializados; não altera vínculos já aceitos |
 | GET `/patient-links` | Paciente; seus vínculos e identificação do profissional |
 | POST `/patient-links/accept` | Paciente com e-mail verificado; `{token, consent:true, policyVersion:"2026-11-03"}` → `{id}` |
 | DELETE `/patient-links/:id` | Paciente ou profissional daquele vínculo; revogação lógica, histórico preservado |

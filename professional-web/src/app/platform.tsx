@@ -591,11 +591,28 @@ function Patients({ open }: { open: (id: string) => void }) {
     [chosen, setChosen] = useState<Patient | null>(null),
     [email, setEmail] = useState(""),
     [token, setToken] = useState(""),
+    [invitationPage, setInvitationPage] = useState(1),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const list = useData<{ items: Patient[] }>(
     `/patients?q=${encodeURIComponent(query)}`,
   );
+  const invitations = useData<{
+    items: { id: string; email: string; expires_at: string }[];
+  }>(`/patient-invitations?page=${invitationPage}`);
+  async function cancelInvitation(id: string) {
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/patient-invitations/${id}`, "DELETE");
+      setToken("");
+      invitations.reload();
+    } catch (e) {
+      setError(explain(e));
+    } finally {
+      setBusy(false);
+    }
+  }
   async function invite(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -609,6 +626,8 @@ function Patients({ open }: { open: (id: string) => void }) {
       );
       setToken(result.token);
       setEmail("");
+      setInvitationPage(1);
+      invitations.reload();
     } catch (e) {
       setError(explain(e));
     } finally {
@@ -718,6 +737,49 @@ function Patients({ open }: { open: (id: string) => void }) {
                 <textarea readOnly value={token} />
               </label>
             </Notice>
+          )}
+          <h3>Convites pendentes</h3>
+          <p>Cancelar um convite impede que o código seja aceito.</p>
+          {invitations.loading ? (
+            <Loading />
+          ) : invitations.error ? (
+            <Notice error>{invitations.error}</Notice>
+          ) : invitations.data?.items.length ? (
+            invitations.data.items.map((invitation) => (
+              <div className="record-row" key={invitation.id}>
+                <div className="grow">
+                  <strong>{invitation.email}</strong>
+                  <p>Válido até {date(invitation.expires_at)}</p>
+                </div>
+                <button
+                  disabled={busy}
+                  onClick={() => cancelInvitation(invitation.id)}
+                  aria-label={`Cancelar convite para ${invitation.email}`}
+                >
+                  Cancelar convite
+                </button>
+              </div>
+            ))
+          ) : (
+            <p>Nenhum convite pendente nesta página.</p>
+          )}
+          {(invitationPage > 1 || invitations.data?.items.length === 30) && (
+            <nav aria-label="Páginas de convites">
+              <button
+                disabled={invitations.loading || invitationPage === 1}
+                onClick={() => setInvitationPage((page) => page - 1)}
+              >
+                Anterior
+              </button>
+              <button
+                disabled={
+                  invitations.loading || invitations.data?.items.length !== 30
+                }
+                onClick={() => setInvitationPage((page) => page + 1)}
+              >
+                Próxima
+              </button>
+            </nav>
           )}
         </section>
       </div>

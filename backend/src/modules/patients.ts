@@ -36,6 +36,33 @@ export function registerPatients(app: FastifyInstance, db: Database) {
       ),
     };
   });
+  app.get("/api/v1/patient-invitations", async (req) => {
+    const actor = actorOf(req);
+    professional(actor);
+    const { page, limit } = pagination.parse(req.query);
+    await audit(db, actor, "invitation.list");
+    return {
+      items: await db.query(
+        sql`SELECT id,email,expires_at,created_at FROM patient_invitation WHERE professional_id=${actor.id} AND accepted_by IS NULL AND expires_at>now() ORDER BY created_at DESC,id LIMIT ${limit} OFFSET ${(page - 1) * limit}`,
+      ),
+      page,
+      limit,
+    };
+  });
+  app.delete("/api/v1/patient-invitations/:id", async (req) => {
+    const actor = actorOf(req),
+      { id } = idParams.parse(req.params);
+    professional(actor);
+    return db.transaction(async (tx) => {
+      // The atomic predicate also serializes cancellation against acceptance.
+      const rows = await tx.query(
+        sql`UPDATE patient_invitation SET expires_at=now() WHERE id=${id} AND professional_id=${actor.id} AND accepted_by IS NULL AND expires_at>now() RETURNING id`,
+      );
+      if (!rows.length) throw new ApiError(404, "INVITATION_UNAVAILABLE");
+      await audit(tx, actor, "invitation.revoke", id);
+      return { ok: true };
+    });
+  });
   app.post("/api/v1/patient-invitations", async (req, reply) => {
     const actor = actorOf(req);
     professional(actor);
