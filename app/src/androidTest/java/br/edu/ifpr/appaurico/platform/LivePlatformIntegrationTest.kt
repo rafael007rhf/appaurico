@@ -88,9 +88,9 @@ class LivePlatformIntegrationTest {
         WorkManager.getInstance(context).cancelAllWork().result.get(20,TimeUnit.SECONDS)
         fun shell(command:String){instrumentation.uiAutomation.executeShellCommand(command).use { java.io.FileInputStream(it.fileDescriptor).readBytes() }}
         shell("cmd connectivity airplane-mode enable");shell("svc wifi disable");shell("svc data disable")
+        val connectivity=context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
         var replay: OutboxOperation?=null
         try {
-            val connectivity=context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
             repeat(60) { if(connectivity.activeNetwork!=null)Thread.sleep(500) }
             assertNull("Test must be offline before recording",connectivity.activeNetwork)
             repository.recordSymptom(account,treatment,fixture.getString("symptomId"),7,"Synthetic offline integration record")
@@ -98,6 +98,8 @@ class LivePlatformIntegrationTest {
             assertTrue(repository.dao.allEvents(account).any {it.syncState=="pending"})
             assertEquals(1,api("/treatments/$treatment/symptom-logs").getJSONArray("items").length())
         } finally {shell("cmd connectivity airplane-mode disable");shell("svc wifi enable");shell("svc data enable")}
+        repeat(60) { if(connectivity.activeNetwork==null)Thread.sleep(500) }
+        assertNotNull("Test network must reconnect before synchronizing and loading WebView",connectivity.activeNetwork)
         val pending=replay!!
         repository.synchronize(account)
         assertTrue(repository.dao.pending(account).isEmpty())
@@ -124,14 +126,26 @@ class LivePlatformIntegrationTest {
         val uiInvitation=api("/patient-invitations","POST",JSONObject().put("email",invitationEmail),expected=201)
         val scenario=ActivityScenario.launch(MainActivity::class.java)
         var web:WebView?=null
+        var pageFailure="none"
         try {
             val ready=CountDownLatch(1)
-            scenario.onActivity {activity->web=WebView(activity).apply {settings.javaScriptEnabled=true;settings.domStorageEnabled=true};activity.setContentView(web);CookieManager.getInstance().setCookie(BuildConfig.API_URL,"$proCookie; Path=/api/v1; Secure; HttpOnly"){ready.countDown()} }
+            scenario.onActivity {activity->web=WebView(activity).apply {
+                settings.javaScriptEnabled=true;settings.domStorageEnabled=true
+                webViewClient=object:android.webkit.WebViewClient(){
+                    override fun onReceivedError(view:WebView,request:android.webkit.WebResourceRequest,error:android.webkit.WebResourceError){if(request.isForMainFrame)pageFailure="network:"+error.errorCode}
+                    override fun onReceivedHttpError(view:WebView,request:android.webkit.WebResourceRequest,response:android.webkit.WebResourceResponse){if(request.isForMainFrame)pageFailure="http:"+response.statusCode}
+                    override fun onReceivedSslError(view:WebView,handler:android.webkit.SslErrorHandler,error:android.net.http.SslError){pageFailure="tls:"+error.primaryError;handler.cancel()}
+                }
+            };activity.setContentView(web);CookieManager.getInstance().setCookie(BuildConfig.API_URL,"$proCookie; Path=/api/v1; Secure; HttpOnly"){ready.countDown()} }
             assertTrue(ready.await(10,TimeUnit.SECONDS))
             instrumentation.runOnMainSync {web!!.loadUrl(BuildConfig.API_URL)}
             var displayed=false
             repeat(90){if(!displayed){val result=CountDownLatch(1);instrumentation.runOnMainSync {web!!.evaluateJavascript("document.body.innerText.includes('INTEGRATION TEST patient') && document.body.innerText.includes('Registros recentes')"){ displayed=it=="true";result.countDown() }};result.await(3,TimeUnit.SECONDS);if(!displayed)Thread.sleep(1000)}}
-            assertTrue("Professional React panel must render synchronized patient records",displayed)
+            var pageState=""
+            val diagnostic=CountDownLatch(1)
+            instrumentation.runOnMainSync {web!!.evaluateJavascript("JSON.stringify({ready:document.readyState,textLength:document.body.innerText.length,login:document.body.innerText.includes('Entrar com segurança'),dashboard:document.body.innerText.includes('Registros recentes')})"){pageState=it;diagnostic.countDown()}}
+            diagnostic.await(5,TimeUnit.SECONDS)
+            assertTrue("Professional React panel must render synchronized patient records ($pageFailure; $pageState)",displayed)
             fun javascript(script:String):String {
                 val result=CountDownLatch(1);var value=""
                 instrumentation.runOnMainSync {web!!.evaluateJavascript(script){value=it;result.countDown()}}

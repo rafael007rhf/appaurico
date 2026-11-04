@@ -60,15 +60,18 @@ jobs:
       - run: node scripts/setup-local.mjs && node scripts/setup-https-local.mjs
       - run: echo "NODE_EXTRA_CA_CERTS=$GITHUB_WORKSPACE/infra/local-tls/ca.crt" >> "$GITHUB_ENV"
       - run: docker compose -f compose.yaml -f compose.https-local.yaml up -d --wait
+      - run: npm run build -w professional-web
+        env: {NEXT_TELEMETRY_DISABLED: '1'}
       - name: Start real backend and professional panel
         run: |
           node scripts/init-integration-database.mjs
           node --env-file=backend/.env.integration --import tsx backend/src/migrate.ts
           node --env-file=backend/.env.integration --import tsx backend/src/server.ts > /tmp/aurico-api.log 2>&1 &
-          npm run dev -w professional-web > /tmp/aurico-web.log 2>&1 &
+          npm run start -w professional-web > /tmp/aurico-web.log 2>&1 &
           node scripts/https-local-proxy.mjs > /tmp/aurico-tls.log 2>&1 &
           node scripts/wait-local.mjs https://localhost:8443/identity/realms/aurico/.well-known/openid-configuration
           node scripts/wait-local.mjs
+          node scripts/wait-local.mjs https://localhost:8443/
           node --env-file=.env scripts/prepare-integration.mjs
       - run: sdkmanager 'platforms;android-36.1' 'build-tools;36.0.0'
       - run: ./gradlew :app:assemblePatientDebug :app:assemblePatientDebugAndroidTest -PauricoApiUrl=https://localhost:8443 -PauricoOidcIssuer=https://localhost:8443/identity/realms/aurico
@@ -88,7 +91,7 @@ jobs:
         if: failure()
         run: |
           docker compose -f compose.yaml -f compose.https-local.yaml logs --tail=80 keycloak
-          cat /tmp/aurico-api.log /tmp/aurico-tls.log 2>/dev/null || true
+          cat /tmp/aurico-api.log /tmp/aurico-tls.log /tmp/aurico-web.log 2>/dev/null || true
       - name: Stop isolated services
         if: always()
         run: docker compose -f compose.yaml -f compose.https-local.yaml down
