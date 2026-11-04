@@ -17,12 +17,21 @@ android {
         applicationId = "br.edu.ifpr.appaurico"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "3.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["appAuthRedirectScheme"] = "br.edu.ifpr.appaurico"
+        buildConfigField("String", "API_URL", "\"" + providers.gradleProperty("auricoApiUrl").getOrElse("") + "\"")
+        buildConfigField("String", "OIDC_ISSUER", "\"" + providers.gradleProperty("auricoOidcIssuer").getOrElse("") + "\"")
+        buildConfigField("String", "OIDC_CLIENT_ID", "\"aurico-android\"")
     }
 
+    flavorDimensions += "environment"
+    productFlavors {
+        create("patient") { dimension = "environment"; buildConfigField("boolean", "DEMO_MODE", "false") }
+        create("demo") { dimension = "environment"; applicationIdSuffix = ".demo"; buildConfigField("boolean", "DEMO_MODE", "true") }
+    }
     buildTypes {
         release {
             optimization {
@@ -36,6 +45,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -75,3 +85,15 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
+
+ksp { arg("room.schemaLocation", "$projectDir/schemas") }
+dependencies {
+    implementation("androidx.work:work-runtime-ktx:2.10.5")
+    implementation("androidx.datastore:datastore-preferences:1.1.7")
+    implementation("net.openid:appauth:0.11.1")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    androidTestImplementation("androidx.room:room-testing:2.7.2")
+}
+
+android { testOptions { unitTests.isIncludeAndroidResources = true } }
+dependencies { testImplementation("org.robolectric:robolectric:4.17") }

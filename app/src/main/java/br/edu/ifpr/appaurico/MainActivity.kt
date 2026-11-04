@@ -31,10 +31,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AppauricoTheme {
-                AuricoNavHost(
+                if (br.edu.ifpr.appaurico.BuildConfig.DEMO_MODE) AuricoNavHost(
                     rotaInicial = rotaInicial.value,
                     onRotaConsumida = { rotaInicial.value = null },
-                )
+                ) else br.edu.ifpr.appaurico.platform.PatientApp()
             }
         }
     }

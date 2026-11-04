@@ -26,10 +26,9 @@ object AppModule {
         Room.databaseBuilder(
             context,
             AuricoDatabase::class.java,
-            "semente.db",
+            if (br.edu.ifpr.appaurico.BuildConfig.DEMO_MODE) "aurico-demo.db" else "semente.db",
         )
-            // App de demonstracao, sem dados a preservar: recria o banco em mudancas de schema.
-            .fallbackToDestructiveMigration(dropAllTables = true)
+            .addMigrations(br.edu.ifpr.appaurico.platform.PlatformMigration.FROM_2_TO_3)
             .build()
 
     @Provides

@@ -46,8 +46,8 @@ object Notificacoes {
         emitir(
             context = context,
             id = NOTIFICACAO_ESTIMULACAO_ID,
-            titulo = "Hora de estimular as sementes",
-            texto = "Pressione cada semente por cerca de 30 segundos.",
+            titulo = "Lembrete AURICO",
+            texto = "Abra o aplicativo para consultar seu acompanhamento.",
             contentIntent = contentIntent,
         )
     }
@@ -57,8 +57,8 @@ object Notificacoes {
         emitir(
             context = context,
             id = NOTIFICACAO_RETORNO_ID,
-            titulo = "Sessao de retorno",
-            texto = "Voce tem retorno marcado. Toque para ver a agenda.",
+            titulo = "Lembrete AURICO",
+            texto = "Abra o aplicativo para consultar seu acompanhamento.",
             contentIntent = contentIntent,
         )
     }
@@ -75,10 +75,12 @@ object Notificacoes {
             .setContentTitle(titulo)
             .setContentText(texto)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setAutoCancel(true)
             .apply { contentIntent?.let(::setContentIntent) }
             .build()
 
+        if (android.os.Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) return
         NotificationManagerCompat.from(context).notify(id, notificacao)
     }
 }
