@@ -1,53 +1,77 @@
-# AURICO 3.0 — plataforma de acompanhamento
+# AURICO 3.0 — paciente, profissional e API integrados
 
-Android offline-first, API REST e painel profissional, desenvolvidos a partir do aplicativo existente. Este incremento é destinado à revisão e homologação; não houve deploy em produção.
+Android offline-first, painel Next.js, API TypeScript/PostgreSQL e identidade OIDC. A integração de desenvolvimento foi exercitada no Android real em emulador contra serviços reais, incluindo registro offline e apresentação dos dados no painel. Não houve deploy de produção.
 
-## Executar localmente
+[Auditoria desta integração](docs/INTEGRATION-AUDIT.md) · [Guia completo e resultados](docs/LIVE-INTEGRATION.md).
 
-Requisitos: Node 22.16+, npm, Docker Compose; para Android, JDK 21 e SDK 36.1 / Build Tools 36.0.0.
+## Iniciar banco, identidade, backend e painel
+
+Requisitos: Node 22.16+, npm e Docker Compose. O host desta entrega não tinha Docker; a validação local usou PostgreSQL nativo e distribuição Keycloak, com o mesmo protocolo e migrações. O CI reproduz o cenário via Compose.
 
 ```sh
 npm ci
-node scripts/setup-local.mjs
-docker compose up -d
-npm run migrate -w backend
-npm run dev -w backend
-# Outro terminal:
+node scripts/setup-local.mjs       # SOMENTE na primeira configuração
+node scripts/setup-https-local.mjs
+docker compose -f compose.yaml -f compose.https-local.yaml up -d --wait
+export NODE_EXTRA_CA_CERTS="$PWD/infra/local-tls/ca.crt"
+node --env-file=backend/.env.https --import tsx backend/src/migrate.ts
+node --env-file=backend/.env.https --import tsx backend/src/server.ts
+```
+
+Em outros terminais:
+
+```sh
 npm run dev -w professional-web
+node scripts/https-local-proxy.mjs
 ```
 
-O setup cria credenciais aleatórias em arquivos ignorados, com permissão 0600, sem imprimir os valores. Recusa sobrescrever configurações existentes. Não executar `docker compose down -v` em bancos que precisem ser preservados.
+Use **https://localhost:8443** como endereço do painel. API: `/api/v1`, identidade: `/identity/realms/aurico`, readiness: `/ready`. O endereço HTTP interno impresso pelo Next.js não é o endereço canônico deste fluxo HTTPS. E-mails de desenvolvimento ficam no Mailpit: http://127.0.0.1:8025.
 
-- Painel: http://127.0.0.1:3000
-- Provedor local: http://127.0.0.1:8080 (admin; senha no `.env`, chave `KEYCLOAK_ADMIN_PASSWORD`)
-- E-mails de verificação locais: http://127.0.0.1:8025
-- API: http://127.0.0.1:4000/api/v1/openapi
+A CA pública local precisa ser confiada conscientemente no navegador de teste; não ignore erros TLS. Ela é criada em `infra/local-tls/ca.crt`. Chaves e configurações sensíveis ficam ignoradas e com permissões restritas. O setup inicial recusa sobrescrever credenciais. Não executar `docker compose down -v` em bancos que precisem ser preservados.
 
-Cadastros públicos recebem papel paciente. Uma conta profissional precisa receber o papel `professional` na administração do provedor, antes do primeiro acesso à API. Isso libera o ambiente profissional, mas não marca habilitação como verificada. Não existe senha padrão, conta privilegiada semeada ou login que ignore autenticação.
+## Cadastro e acompanhamento
 
-Convide pelo e-mail do paciente, entregue o código pelo canal autorizado, confirme o e-mail no provedor e aceite o convite na área de compartilhamento. Crie um plano no painel, revise e publique. Nenhum e-mail de convite é enviado automaticamente.
+Cadastre-se pelo provedor e confirme o e-mail. Uma conta ainda sem vínculos/tratamentos de paciente pode escolher **Criar meu perfil profissional** no painel. A mudança é autenticada e auditada; a habilitação permanece não verificada. Uma conta que já é usada como paciente deve usar outra identidade para o ambiente profissional.
 
-## Android
+O profissional cria convite para o e-mail do paciente e entrega o código por canal autorizado. O paciente autentica no Android, aceita o vínculo e recebe os planos publicados, sem cadastrá-los manualmente. Registros persistem no Room antes de qualquer envio. O painel lê o PostgreSQL e atualiza em até 30 segundos enquanto está visível. A tela Conta do Android permite consultar e revogar compartilhamentos. Não há pacientes semeados no setup normal.
 
-```sh
-./gradlew :app:assemblePatientDebug :app:assembleDemoDebug
-./gradlew :app:testPatientDebugUnitTest :app:lintPatientDebug
-./gradlew :app:connectedPatientDebugAndroidTest
-```
+O papel `aurico-operations` é separado, atribuído no provedor apenas a operadores autorizados. Não é concedido pelo cadastro profissional.
 
-`patient` mantém o pacote original e `semente.db`; `demo` usa `.demo` e outro banco. Sem serviço configurado, o paciente tem onboarding, registros locais e consulta de legados, sem tratamento fictício.
+## APK paciente conectado
 
-Para integrar com API e identidade em HTTPS:
+Requisitos Android: JDK 21, SDK 36.1, Build Tools 36.0.0.
 
 ```sh
+adb reverse tcp:8443 tcp:8443
 ./gradlew :app:assemblePatientDebug \
-  -PauricoApiUrl=https://api.seu-ambiente.example \
-  -PauricoOidcIssuer=https://identidade.seu-ambiente.example/realms/aurico
+  -PauricoApiUrl=https://localhost:8443 \
+  -PauricoOidcIssuer=https://localhost:8443/identity/realms/aurico
 ```
 
-Cliente público: `aurico-android`; redirect `br.edu.ifpr.appaurico:/oauth2redirect`; PKCE S256, audiência `aurico-api`, escopos openid/profile/email/offline_access. Use certificado confiável; a configuração HTTP do Compose é para desenvolvimento web no computador, não uma liberação de HTTP no Android.
+O APK é `app/build/outputs/apk/patient/debug/app-patient-debug.apk`. Localhost só chega ao computador quando o encaminhamento ADB acima está ativo. O app debug confia na CA local apenas para localhost; o navegador externo do login também precisa confiar nessa CA no aparelho de teste. Não existe opção para aceitar certificados inválidos. Para uso remoto, forneça URLs públicas HTTPS reais por esses mesmos parâmetros e use certificados públicos confiáveis.
 
-## Verificar
+`patient` mantém o pacote original e `semente.db`; `demo` usa `.demo` e outro banco. `app-demo-debug.apk` é a demonstração acadêmica; `app-patient-debug-androidTest.apk` contém testes e não é o app de uso. Builds sem URLs configuradas continuam oferecendo modo local e não inventam tratamentos.
+
+Cliente Android: público `aurico-android`, Authorization Code/PKCE S256, redirect `br.edu.ifpr.appaurico:/oauth2redirect`, audiência `aurico-api`. Nenhuma senha, chave privada ou token é compilado no APK.
+
+## Testar a integração real
+
+O procedimento do cenário A–E está em [LIVE-INTEGRATION.md](docs/LIVE-INTEGRATION.md). Com o ambiente HTTPS acima em execução:
+
+```sh
+node scripts/init-integration-database.mjs
+# Execute migrações e backend com backend/.env.integration para isolar os testes.
+node --env-file=backend/.env.integration --import tsx backend/src/migrate.ts
+node --env-file=.env scripts/prepare-integration.mjs
+./gradlew :app:assemblePatientDebug :app:assemblePatientDebugAndroidTest \
+  -PauricoApiUrl=https://localhost:8443 \
+  -PauricoOidcIssuer=https://localhost:8443/identity/realms/aurico
+node scripts/run-android-integration.mjs
+```
+
+O runner exige emulador dedicado e usa identidades sintéticas e arquivo privado de fixture, sem autenticação fictícia. O backend deve estar conectado ao banco `aurico_integration` durante esse teste. Nunca use pacientes reais nas fixtures.
+
+Verificações regulares:
 
 ```sh
 npm run typecheck
@@ -55,18 +79,13 @@ npm run lint
 npm test
 npm run build
 npm audit
+./gradlew :app:testPatientDebugUnitTest :app:lintPatientDebug
 ```
 
-[Auditoria](docs/AUDIT.md), [arquitetura](docs/ARCHITECTURE.md), [API](docs/API.md), [sincronização e recuperação](docs/SYNC-AND-MIGRATION.md), [segurança e pendências](docs/SECURITY.md), [evidências da entrega](docs/VERIFICATION.md).
+## Produção e limites
 
-## Escopo e pendências
+`backend/.env.production.example` lista as credenciais externas. Domínio/HTTPS público, PostgreSQL gerenciado com TLS, identidade de produção e SMTP precisam ser provisionados e configurados. Nada disso foi presumido nem publicado. A CA local e o Keycloak `start-dev` não são configurações de produção.
 
-Implementados: autorização por vínculo; convites/consentimento/revogação; tratamento com rascunho e publicação versionada; sintomas com escalas; biblioteca de anotações revisadas; sessões e retorno; registros/correções; ocorrências únicas e adesão; sync idempotente com cursor; dashboard; painel responsivo; PDF local; exportação pessoal; app paciente com persistência/fila por conta e migração preservadora.
+Persistem as exigências de homologação física de alarmes/permissões/bateria, revisão independente de segurança, aprovação jurídica/profissional, definição operacional de retenção/exclusão e habilitação do acesso de responsáveis. A proposta está em [POLICY-DRAFT.md](docs/POLICY-DRAFT.md).
 
-Adicionados: importação assistida de legados com confirmação e prevenção de repetição; filtros/gráfico Android por período e intervalo de sessão; comparação descritiva entre sessões no painel; solicitações de direitos, revisão cadastral e revisão de representação com fila operacional auditada; login real testado com Keycloak local.
-
-Ainda dependem de homologação: aprovação da política de retenção/exclusão, procedimento efetivo de purge e backups, comprovação profissional na fonte competente, habilitação do acesso de responsáveis e testes de notificações em aparelhos físicos. A proposta inicial está em [POLICY-DRAFT.md](docs/POLICY-DRAFT.md). Consulte o relatório de verificação antes de assumir cobertura ou prontidão para produção.
-
-## Integração conectada
-
-O guia atualizado é [LIVE-INTEGRATION.md](docs/LIVE-INTEGRATION.md), com auditoria em [INTEGRATION-AUDIT.md](docs/INTEGRATION-AUDIT.md). Ele documenta os serviços reais, o APK HTTPS de desenvolvimento, o encaminhamento ADB e o cenário nativo aprovado. Este APK conectado usa `https://localhost:8443` somente com encaminhamento explícito para o computador; não é um serviço público remoto.
+Documentação: [API](docs/API.md), [arquitetura](docs/ARCHITECTURE.md), [migração e recuperação](docs/SYNC-AND-MIGRATION.md), [segurança](docs/SECURITY.md), [histórico das verificações](docs/VERIFICATION.md).

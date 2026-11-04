@@ -58,6 +58,16 @@ Para um aparelho fora do USB/rede de teste, configure URLs HTTPS públicas reais
 
 O cenário não injeta token fictício. Ele usa a configuração AppAuth real do Android, PKCE e código emitido pelo Keycloak, envia pelos clientes reais, persiste no Room e verifica os registros no backend. A tela React é carregada em WebView de teste com sessão profissional real para verificar a apresentação dos registros. Não se trata de homologação da navegação do navegador do usuário ou de aparelho físico.
 
+Antes do cenário, prepare o banco isolado e, no terminal do backend, pare apenas o processo da API e reinicie com a configuração de integração (os demais serviços continuam):
+
+```sh
+node scripts/init-integration-database.mjs
+NODE_EXTRA_CA_CERTS="$PWD/infra/local-tls/ca.crt" node --env-file=backend/.env.integration --import tsx backend/src/migrate.ts
+NODE_EXTRA_CA_CERTS="$PWD/infra/local-tls/ca.crt" node --env-file=backend/.env.integration --import tsx backend/src/server.ts
+```
+
+Em outro terminal:
+
 ```sh
 NODE_EXTRA_CA_CERTS="$PWD/infra/local-tls/ca.crt" node scripts/wait-local.mjs
 NODE_EXTRA_CA_CERTS="$PWD/infra/local-tls/ca.crt" node --env-file=.env scripts/prepare-integration.mjs

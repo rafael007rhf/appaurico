@@ -80,17 +80,17 @@ class LivePlatformIntegrationTest {
         assertEquals(1,api("/treatments/$treatment/stimulations").getJSONArray("items").length())
         WorkManager.getInstance(context).cancelAllWork().result.get(20,TimeUnit.SECONDS)
         fun shell(command:String){instrumentation.uiAutomation.executeShellCommand(command).use { java.io.FileInputStream(it.fileDescriptor).readBytes() }}
-        shell("svc wifi disable");shell("svc data disable")
+        shell("cmd connectivity airplane-mode enable");shell("svc wifi disable");shell("svc data disable")
         var replay: OutboxOperation?=null
         try {
-            Thread.sleep(1500)
             val connectivity=context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            repeat(60) { if(connectivity.activeNetwork!=null)Thread.sleep(500) }
             assertNull("Test must be offline before recording",connectivity.activeNetwork)
             repository.recordSymptom(account,treatment,fixture.getString("symptomId"),7,"Synthetic offline integration record")
             val queued=repository.dao.pending(account);assertTrue(queued.isNotEmpty());replay=queued.first()
             assertTrue(repository.dao.allEvents(account).any {it.syncState=="pending"})
             assertEquals(1,api("/treatments/$treatment/symptom-logs").getJSONArray("items").length())
-        } finally {shell("svc wifi enable");shell("svc data enable")}
+        } finally {shell("cmd connectivity airplane-mode disable");shell("svc wifi enable");shell("svc data enable")}
         val pending=replay!!
         repository.synchronize(account)
         assertTrue(repository.dao.pending(account).isEmpty())
