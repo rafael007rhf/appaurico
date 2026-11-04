@@ -1,0 +1,5 @@
+services:
+  keycloak:
+    command: ['start-dev', '--import-realm', '--http-port=8080', '--http-relative-path=/identity', '--proxy-headers=xforwarded']
+    environment:
+      KC_HOSTNAME: https://localhost:8443/identity

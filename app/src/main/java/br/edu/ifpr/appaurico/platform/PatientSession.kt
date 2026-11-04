@@ -80,17 +80,17 @@ class PatientSession @Inject constructor(@ApplicationContext private val context
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(1, 1 + length))) }
         return JSONObject(String(cipher.doFinal(bytes.copyOfRange(1 + length, bytes.size))))
     }
-    suspend fun loginIntent(): Intent {
+    suspend fun authorizationRequest(): AuthorizationRequest {
         check(configured) { "O acesso online ainda não está configurado nesta versão." }
         val config = suspendCancellableCoroutine<AuthorizationServiceConfiguration> { continuation ->
             AuthorizationServiceConfiguration.fetchFromIssuer(Uri.parse(BuildConfig.OIDC_ISSUER)) { value, error ->
                 if (continuation.isActive) { if (value != null) continuation.resume(value) else continuation.resumeWithException(error ?: IllegalStateException("Identidade indisponível")) }
             }
         }
-        val request = AuthorizationRequest.Builder(config, BuildConfig.OIDC_CLIENT_ID, ResponseTypeValues.CODE, Uri.parse("br.edu.ifpr.appaurico:/oauth2redirect"))
+        return AuthorizationRequest.Builder(config, BuildConfig.OIDC_CLIENT_ID, ResponseTypeValues.CODE, Uri.parse("br.edu.ifpr.appaurico:/oauth2redirect"))
             .setScopes("openid", "profile", "email", "offline_access").build()
-        return service.getAuthorizationRequestIntent(request)
     }
+    suspend fun loginIntent(): Intent = service.getAuthorizationRequestIntent(authorizationRequest())
     suspend fun finishLogin(intent: Intent) {
         val response = AuthorizationResponse.fromIntent(intent) ?: throw IllegalStateException("Acesso cancelado ou inválido.")
         val state = AuthState(response, AuthorizationException.fromIntent(intent))

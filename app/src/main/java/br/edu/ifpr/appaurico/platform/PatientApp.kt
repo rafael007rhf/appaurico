@@ -258,20 +258,26 @@ private fun Account(vm: PatientViewModel, account: String, busy: Boolean, login:
     val reminders by vm.reminders.collectAsStateWithLifecycle()
     var token by rememberSaveable { mutableStateOf("") }
     var consent by rememberSaveable { mutableStateOf(false) }
+    val links by vm.sharingLinks.collectAsStateWithLifecycle()
+    var revoke by remember { mutableStateOf<String?>(null) }
     PatientColumn {
         Text("Conta e privacidade", style = MaterialTheme.typography.headlineSmall)
         Text(if (account == "local") "Modo local" else "Conta de paciente conectada")
         if (account == "local") Button(onClick = login, enabled = vm.repository.session.configured && !busy) { Text("Entrar ou criar conta") }
         else {
             Button(onClick = vm::sync, enabled = !busy) { Text("Sincronizar agora") }
+            OutlinedButton(onClick=login,enabled=!busy) {Text("Entrar novamente ou trocar conta")}
             OutlinedTextField(token, { token = it.take(100) }, label = { Text("Código do convite") }, modifier = Modifier.fillMaxWidth())
             Text("Aceitar permite ao profissional acompanhar os registros dos tratamentos sob sua responsabilidade. A revogação está disponível no painel de compartilhamento da sua conta.")
             Row { Checkbox(consent, { consent = it }); Text("Autorizo este compartilhamento (versão 2026-11-03).", Modifier.padding(top = 12.dp)) }
             Button(onClick = { vm.accept(token, consent) }, enabled = consent && token.length >= 40 && !busy) { Text("Aceitar convite") }
+            OutlinedButton(onClick=vm::loadSharing,enabled=!busy) {Text("Consultar compartilhamentos")}
+            links.forEach { link -> Text(link.getString("display_name")+" · "+link.getString("status"));if(link.getString("status")=="active") OutlinedButton(onClick={revoke=link.getString("id")}) {Text("Revogar compartilhamento")} }
             OutlinedButton(onClick = vm::logout, enabled = !busy) { Text("Sair desta conta") }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) { Switch(reminders, vm::setReminders); Text("Lembretes do plano publicado", Modifier.padding(top = 12.dp)) }
         Text("Os horários seguem o plano profissional. O Android pode atrasar os avisos para economizar bateria. Nenhuma orientação clínica aparece na tela bloqueada.")
+        revoke?.let { id -> AlertDialog(onDismissRequest={revoke=null},title={Text("Revogar compartilhamento?")},text={Text("O profissional perderá acesso aos seus acompanhamentos. Seu histórico será preservado.")},confirmButton={TextButton(onClick={vm.revokeSharing(id);revoke=null}) {Text("Revogar")}},dismissButton={TextButton(onClick={revoke=null}) {Text("Cancelar")}}) }
         Text("O armazenamento local é protegido pelo dispositivo. Use bloqueio de tela. Dados antigos não são atribuídos automaticamente à conta conectada.")
     }
 }

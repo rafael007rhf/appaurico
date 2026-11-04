@@ -24,3 +24,9 @@ dist/
 backend/.data/
 infra/realm.generated.json
 .kotlin/
+.env.*
+!.env.example
+infra/local-tls/
+app/src/debug/res/raw/aurico_local_ca.crt
+app/src/debug/res/xml/aurico_network.xml
+.integration/

@@ -67,6 +67,9 @@ class PatientViewModel @Inject constructor(val repository: PatientRepository, pr
         repository.importLegacy(account.value,id,treatment,symptom,true)
         message.value = "Cópia associada salva na fila. O registro local original foi preservado."
     }
+    val sharingLinks=MutableStateFlow<List<JSONObject>>(emptyList())
+    fun loadSharing()=run { repository.session.mutex.withLock { val data=repository.session.requestFor(account.value,"/patient-links").getJSONArray("items");sharingLinks.value=(0 until data.length()).map(data::getJSONObject) } }
+    fun revokeSharing(id:String)=run { repository.session.mutex.withLock { repository.session.requestFor(account.value,"/patient-links/$id","DELETE");repository.synchronize(account.value);scheduler.reagendarTodos(emptyList()) };sharingLinks.value=sharingLinks.value.map { if(it.getString("id")==id) it.put("status","revoked") else it };message.value="Compartilhamento revogado. Seu histórico foi preservado." }
     fun accept(token: String, consent: Boolean) = run {
         require(consent)
         repository.session.mutex.withLock {

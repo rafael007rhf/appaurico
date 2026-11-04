@@ -46,7 +46,19 @@ export async function provision(
       sql`INSERT INTO app_user(id,issuer,subject,role,display_name,email,email_verified) VALUES(${randomUUID()},${issuer},${claims.sub},${role},${typeof claims.name === "string" ? claims.name.slice(0, 160) : "Usuário"},${typeof claims.email === "string" ? claims.email.toLowerCase() : null},${claims.email_verified === true}) ON CONFLICT(issuer,subject) DO UPDATE SET email=EXCLUDED.email,email_verified=EXCLUDED.email_verified,display_name=EXCLUDED.display_name,updated_at=now() RETURNING *`,
     );
     // Role changes require an explicit account migration; never silently expose another role's data.
-    if (user!.role !== role) throw new ApiError(403, "ACCOUNT_ROLE_CHANGED");
+    if (
+      user!.role !== role &&
+      !(
+        user!.role === "professional" &&
+        role === "patient" &&
+        (
+          await tx.query(
+            sql`SELECT user_id FROM professional_profile WHERE user_id=${user!.id}`,
+          )
+        ).length
+      )
+    )
+      throw new ApiError(403, "ACCOUNT_ROLE_CHANGED");
     if (role === "patient")
       await tx.query(
         sql`INSERT INTO patient_profile(user_id) VALUES(${user!.id}) ON CONFLICT DO NOTHING`,
@@ -183,6 +195,40 @@ export async function registerAuth(
       );
     reply.clearCookie("aurico_session", { path: "/api/v1" });
     return { ok: true };
+  });
+  app.post("/api/v1/me/enroll-professional", async (req) => {
+    const actor = actorOf(req);
+    if (actor.role !== "patient")
+      throw new ApiError(409, "ALREADY_PROFESSIONAL");
+    if (
+      !req.body ||
+      (req.body as { confirmed?: unknown }).confirmed !== true ||
+      Object.keys(req.body as object).length !== 1
+    )
+      throw new ApiError(422, "CONFIRMATION_REQUIRED");
+    await db.transaction(async (tx) => {
+      await tx.query(
+        sql`SELECT id FROM app_user WHERE id=${actor.id} FOR UPDATE`,
+      );
+      if (
+        (
+          await tx.query(
+            sql`SELECT id FROM patient_professional_link WHERE patient_id=${actor.id} UNION ALL SELECT id FROM treatment WHERE patient_id=${actor.id}`,
+          )
+        ).length
+      )
+        throw new ApiError(409, "PATIENT_ACCOUNT_IN_USE");
+      await tx.query(
+        sql`INSERT INTO professional_profile(user_id) VALUES(${actor.id}) ON CONFLICT DO NOTHING`,
+      );
+      await tx.query(
+        sql`UPDATE app_user SET role='professional',updated_at=now() WHERE id=${actor.id}`,
+      );
+      await tx.query(
+        sql`INSERT INTO audit_event(id,actor_id,action) VALUES(${randomUUID()},${actor.id},'professional.enroll')`,
+      );
+    });
+    return { ok: true, verificationStatus: "unverified" };
   });
   app.get("/api/v1/me", async (req) => {
     const profile =

@@ -649,3 +649,48 @@ test("patient snapshots contain session metadata but exclude professional notes"
   assert.ok(response.json().sessions.length > 0);
   assert.equal(response.json().sessions[0].notes, undefined);
 });
+
+test("professional self enrollment is server controlled and refuses existing patient relationships", async () => {
+  assert.equal(
+    (
+      await call("POST", "/api/v1/me/enroll-professional", "patient", {
+        confirmed: true,
+      })
+    ).statusCode,
+    409,
+  );
+  assert.equal(
+    (
+      await call("POST", "/api/v1/me/enroll-professional", "otherPatient", {
+        confirmed: false,
+      })
+    ).statusCode,
+    422,
+  );
+  assert.equal(
+    (
+      await call("POST", "/api/v1/me/enroll-professional", "otherPatient", {
+        confirmed: true,
+        operations_access: true,
+      })
+    ).statusCode,
+    422,
+  );
+  assert.equal(
+    (
+      await call("POST", "/api/v1/me/enroll-professional", "otherPatient", {
+        confirmed: true,
+      })
+    ).statusCode,
+    200,
+  );
+  const me = await call("GET", "/api/v1/me", "otherPatient");
+  assert.equal(me.statusCode, 200);
+  assert.equal(me.json().role, "professional");
+  assert.equal(me.json().profile.verification_status, "unverified");
+  assert.equal(me.json().operations_access, false);
+  assert.equal(
+    (await call("GET", "/api/v1/patients", "otherPatient")).json().items.length,
+    0,
+  );
+});

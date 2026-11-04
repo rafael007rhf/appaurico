@@ -83,6 +83,8 @@ class PatientRepository @Inject constructor(val database: AuricoDatabase, val se
             if (pending.isEmpty()) break
             val result = session.requestFor(account, "/sync/push", "POST", JSONObject().put("deviceId", session.deviceId()).put("operations", JSONArray(pending.map { JSONObject(it.payload) })))
             val results = result.getJSONArray("results")
+            val received=(0 until results.length()).map { results.getJSONObject(it).getString("operationId") }
+            require(received.size==pending.size && received.toSet()==pending.map { it.id }.toSet()) { "O servidor não confirmou o lote completo. A fila foi preservada." }
             database.withTransaction {
                 for (i in 0 until results.length()) {
                     val ack = results.getJSONObject(i)

@@ -136,6 +136,21 @@ function useData<T>(path: string) {
       });
     return () => controller.abort();
   }, [path, revision]);
+  useEffect(() => {
+    if (
+      !["/dashboard", "/patients", "/treatments", "/reports"].some((prefix) =>
+        path.startsWith(prefix),
+      )
+    )
+      return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible")
+        api<T>(path)
+          .then(setData)
+          .catch((e) => setError(explain(e)));
+    }, 30000);
+    return () => window.clearInterval(timer);
+  }, [path]);
   return { data, error, loading, reload };
 }
 const date = (value: string) =>
@@ -360,7 +375,32 @@ export function Platform() {
               professional={user.role === "professional"}
             />
           ) : user.role === "patient" ? (
-            <Sharing />
+            <>
+              <Sharing />
+              <section className="panel">
+                <h2>Usar o AURICO como profissional</h2>
+                <p>
+                  Uma conta sem acompanhamentos de paciente pode abrir a área
+                  profissional. O cadastro permanece não verificado até revisão.
+                  Esta alteração exige uma conta separada se você já usa a
+                  plataforma como paciente.
+                </p>
+                <button
+                  onClick={async () => {
+                    try {
+                      await api("/me/enroll-professional", "POST", {
+                        confirmed: true,
+                      });
+                      me.reload();
+                    } catch (e) {
+                      window.alert(explain(e));
+                    }
+                  }}
+                >
+                  Criar meu perfil profissional
+                </button>
+              </section>
+            </>
           ) : selected ? (
             <TreatmentDetail id={selected} back={() => setSelected(null)} />
           ) : tab === "overview" ? (

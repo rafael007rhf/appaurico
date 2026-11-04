@@ -2,7 +2,7 @@ name: Platform checks
 on:
   pull_request:
   push:
-    branches: [feature/aurico-3-platform]
+    branches: [feature/aurico-3-platform, feature/aurico-live-integration]
 permissions:
   contents: read
 jobs:
@@ -36,3 +36,39 @@ jobs:
           api-level: 35
           arch: x86_64
           script: ./gradlew :app:connectedPatientDebugAndroidTest
+  live-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '21'}
+      - uses: android-actions/setup-android@v3
+        with: {packages: platform-tools}
+      - uses: gradle/actions/setup-gradle@v4
+      - run: npm ci
+      - run: node scripts/setup-local.mjs && node scripts/setup-https-local.mjs
+      - run: echo "NODE_EXTRA_CA_CERTS=$GITHUB_WORKSPACE/infra/local-tls/ca.crt" >> "$GITHUB_ENV"
+      - run: docker compose -f compose.yaml -f compose.https-local.yaml up -d --wait
+      - name: Start real backend and professional panel
+        run: |
+          node scripts/init-integration-database.mjs
+          node --env-file=backend/.env.integration --import tsx backend/src/migrate.ts
+          node --env-file=backend/.env.integration --import tsx backend/src/server.ts > /tmp/aurico-api.log 2>&1 &
+          npm run dev -w professional-web > /tmp/aurico-web.log 2>&1 &
+          node scripts/https-local-proxy.mjs > /tmp/aurico-tls.log 2>&1 &
+          node scripts/wait-local.mjs https://localhost:8443/identity/realms/aurico/.well-known/openid-configuration
+          node scripts/wait-local.mjs
+          node --env-file=.env scripts/prepare-integration.mjs
+      - run: sdkmanager 'platforms;android-36.1' 'build-tools;36.0.0'
+      - run: ./gradlew :app:assemblePatientDebug :app:assemblePatientDebugAndroidTest -PauricoApiUrl=https://localhost:8443 -PauricoOidcIssuer=https://localhost:8443/identity/realms/aurico
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          script: node scripts/run-android-integration.mjs
+      - name: Stop isolated services
+        if: always()
+        run: docker compose -f compose.yaml -f compose.https-local.yaml down
