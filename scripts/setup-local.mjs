@@ -11,6 +11,6 @@ writeFileSync(path.join(root,'.env'),`POSTGRES_PASSWORD=${db}\nKEYCLOAK_ADMIN_PA
 writeFileSync(path.join(root,'backend/.env'),`DATABASE_URL=postgresql://aurico:${db}@127.0.0.1:5432/aurico\nOIDC_ISSUER=http://127.0.0.1:8080/realms/aurico\nOIDC_AUDIENCE=aurico-api\nOIDC_CLIENT_ID=aurico-web\nOIDC_CLIENT_SECRET=${web}\nWEB_ORIGIN=http://127.0.0.1:3000\nALLOW_LOCAL_HTTP=true\nPORT=4000\n`,{mode:0o600});
 writeFileSync(path.join(root,'professional-web/.env.local'),'API_INTERNAL_URL=http://127.0.0.1:4000\nNEXT_TELEMETRY_DISABLED=1\n',{mode:0o600});
 const realm=JSON.parse(readFileSync(path.join(root,'infra/realm.template.json'),'utf8'));
-realm.clients.find(c=>c.clientId==='aurico-web').secret=web;
-writeFileSync(path.join(root,'infra/realm.generated.json'),JSON.stringify(realm,null,2),{mode:0o600});
+realm.clients.find(c=>c.clientId==='aurico-web').secret='${AURICO_WEB_CLIENT_SECRET}';
+writeFileSync(path.join(root,'infra/realm.generated.json'),JSON.stringify(realm,null,2),{mode:0o644});
 console.log('Local configuration created. Credentials remain in ignored files. Run docker compose up -d.');

@@ -69,6 +69,11 @@ jobs:
           api-level: 35
           arch: x86_64
           script: node scripts/run-android-integration.mjs
+      - name: Diagnose failed local services
+        if: failure()
+        run: |
+          docker compose -f compose.yaml -f compose.https-local.yaml logs --tail=80 keycloak
+          cat /tmp/aurico-api.log /tmp/aurico-tls.log 2>/dev/null || true
       - name: Stop isolated services
         if: always()
         run: docker compose -f compose.yaml -f compose.https-local.yaml down
